@@ -114,8 +114,10 @@ jobs:
       - name: Upload IPKs to Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: luci-app-uninstall_${{ matrix.release }}_${{ matrix.short }}
           files: |
             artifacts/${{ matrix.release }}/${{ matrix.short }}/*.ipk
+          token: ${{ secrets.GITHUB_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -185,7 +187,9 @@ jobs:
         if: ${{ hashFiles(format('artifacts/{0}/{1}/*.run', matrix.release, matrix.short)) != '' }}
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: luci-app-uninstall_${{ matrix.release }}_${{ matrix.short }}
           files: |
             artifacts/${{ matrix.release }}/${{ matrix.short }}/*.run
+          token: ${{ secrets.GITHUB_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
