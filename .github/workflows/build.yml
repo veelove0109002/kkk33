@@ -79,9 +79,60 @@ jobs:
         run: |
           ls -al artifacts/${{ matrix.release }}/${{ matrix.short }} || true
 
-      - name: Upload artifacts
+      - name: Upload artifacts (IPKs)
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-uninstall_${{ matrix.release }}_${{ matrix.short }}
           path: artifacts/${{ matrix.release }}/${{ matrix.short }}/*.ipk
+          if-no-files-found: warn
+
+      - name: Install makeself
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y makeself
+
+      - name: Package .run installer
+        run: |
+          set -euxo pipefail
+          REL='${{ matrix.release }}'
+          ARCH='${{ matrix.short }}'
+          ART_DIR="artifacts/${REL}/${ARCH}"
+          INSTALLER_DIR="installer/${REL}/${ARCH}"
+          rm -rf "$INSTALLER_DIR"
+          mkdir -p "$INSTALLER_DIR"
+          # Collect all built ipks
+          cp -v ${ART_DIR}/*.ipk "$INSTALLER_DIR"/
+
+          # Write install script executed on target (OpenWrt)
+          cat > "$INSTALLER_DIR/install.sh" << 'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          echo "== luci-app-uninstall installer =="
+          if ! command -v opkg >/dev/null 2>&1; then
+            echo "Error: opkg not found. Please run on OpenWrt." >&2
+            exit 1
+          fi
+          echo "Installing packages..."
+          if ! opkg install ./*.ipk; then
+            echo "Retrying with --force-reinstall"
+            opkg install --force-reinstall ./*.ipk
+          fi
+          echo "Installation finished."
+          EOF
+          chmod +x "$INSTALLER_DIR/install.sh"
+
+          RUN_NAME="luci-app-uninstall_${REL}_${ARCH}.run"
+          makeself --nox11 --notemp "$INSTALLER_DIR" "${ART_DIR}/${RUN_NAME}" "luci-app-uninstall Installer (${REL}/${ARCH})" ./install.sh
+
+      - name: List artifacts after .run
+        run: |
+          set -euxo pipefail
+          ls -al artifacts/${{ matrix.release }}/${{ matrix.short }} || true
+
+      - name: Upload .run installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: luci-app-uninstall_run_${{ matrix.release }}_${{ matrix.short }}
+          path: artifacts/${{ matrix.release }}/${{ matrix.short }}/*.run
           if-no-files-found: warn
