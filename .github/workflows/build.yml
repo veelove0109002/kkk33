@@ -73,9 +73,29 @@ jobs:
             sed -i 's/^src-git\s\+telephony\b/# &/' feeds.conf.default
           fi
 
-          ./scripts/feeds update -a
+          # Update feeds with retry (network hiccups are common on CI)
+          n=0
+          until [ $n -ge 3 ]; do
+            ./scripts/feeds update -a && break
+            n=$((n+1))
+            echo "feeds update failed, retry $n/3" >&2
+            sleep 5
+          done
+
+          # Ensure luci feed directory exists; if not, update luci only and fail if still missing
+          if [ ! -d feeds/luci ]; then
+            echo "feeds/luci not found after update -a, trying update luci only..." >&2
+            ./scripts/feeds update luci || true
+          fi
+          if [ ! -d feeds/luci ]; then
+            echo "ERROR: luci feed directory still missing (feeds/luci)." >&2
+            echo "feeds.conf.default:" >&2
+            sed -n '1,120p' feeds.conf.default >&2 || true
+            exit 3
+          fi
+
           # Install only necessary luci packages to minimize dependency surface
-          ./scripts/feeds install -p luci luci-base || true
+          ./scripts/feeds install -p luci luci-base luci-compat || true
 
           rm -rf package/luci-app-uninstall
           cp -a "$GITHUB_WORKSPACE/luci-app-uninstall" package/
