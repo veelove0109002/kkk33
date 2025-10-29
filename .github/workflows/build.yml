@@ -15,13 +15,15 @@ on:
 
 jobs:
   build:
-    name: SDK ${{ matrix.branch }} / ${{ matrix.target }}
+    name: SDK ${{ matrix.release }} / ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        branch: [ 'openwrt-23.05' ]
-        target: [ 'x86_64', 'ath79-generic', 'ramips-mt7621' ]
+        release: [ '23.05.3' ]
+        include:
+          - target: x86/64
+            short: x86_64
 
     steps:
       - name: Checkout
@@ -29,57 +31,57 @@ jobs:
 
       - name: Prepare host directories
         run: |
-          mkdir -p artifacts/${{ matrix.branch }}/${{ matrix.target }}
-          mkdir -p dl build_dir staging_dir tmp
+          mkdir -p artifacts/${{ matrix.release }}/${{ matrix.short }}
 
-      - name: Pull OpenWrt SDK image
-        run: |
-          docker pull ghcr.io/openwrt/sdk:${{ matrix.branch }}-${{ matrix.target }}
-
-      - name: Build package with SDK
-        env:
-          FORCE_UNSAFE_CONFIGURE: 1
+      - name: Download OpenWrt SDK (auto-detect filename)
+        id: dl
         run: |
           set -euxo pipefail
-          docker run --rm \
-            -v "$GITHUB_WORKSPACE":/work \
-            -w /builder \
-            -e FORCE_UNSAFE_CONFIGURE=1 \
-            -v "$GITHUB_WORKSPACE/dl":/builder/dl \
-            -v "$GITHUB_WORKSPACE/build_dir":/builder/build_dir \
-            -v "$GITHUB_WORKSPACE/staging_dir":/builder/staging_dir \
-            -v "$GITHUB_WORKSPACE/tmp":/builder/tmp \
-            ghcr.io/openwrt/sdk:${{ matrix.branch }}-${{ matrix.target }} \
-            bash -lc '
-              set -euxo pipefail
-              ./scripts/feeds update -a
-              ./scripts/feeds install -a
-              rm -rf package/luci-app-uninstall
-              cp -a /work/luci-app-uninstall package/
-              make defconfig
-              make package/luci-app-uninstall/compile -j$(nproc) V=sc || {
-                echo "Primary build path failed, trying generic output lookup";
-                true;
-              }
-              mkdir -p /work/artifacts/${{ matrix.branch }}/${{ matrix.target }}
-              # Try common feed output paths
-              shopt -s nullglob globstar || true
-              for d in bin/packages/*/*/{luci,packages}; do
-                cp -v "$d"/luci-app-uninstall*.ipk /work/artifacts/${{ matrix.branch }}/${{ matrix.target }}/ 2>/dev/null || true
-              done
-              # Also check bin/targets (SDK can place pkgs there sometimes)
-              for d in bin/targets/**; do
-                cp -v "$d"/packages/luci-app-uninstall*.ipk /work/artifacts/${{ matrix.branch }}/${{ matrix.target }}/ 2>/dev/null || true
-              done
-            '
+          BASE_URL="https://downloads.openwrt.org/releases/${{ matrix.release }}/targets/${{ matrix.target }}"
+          echo "BASE_URL=$BASE_URL"
+          SDK_FILE=$(curl -sS "$BASE_URL/" | grep -o 'openwrt-sdk-[^"<]*\.tar\.xz' | head -n1)
+          if [ -z "$SDK_FILE" ]; then
+            echo "Could not find SDK tarball at $BASE_URL" >&2
+            exit 1
+          fi
+          echo "SDK_FILE=$SDK_FILE"
+          curl -fL "$BASE_URL/$SDK_FILE" -o sdk.tar.xz
+          mkdir -p sdk && tar -C sdk -xJf sdk.tar.xz
+          SDK_DIR=$(find sdk -maxdepth 1 -type d -name 'openwrt-sdk-*' | head -n1)
+          if [ -z "$SDK_DIR" ]; then
+            echo "SDK dir not found after extraction" >&2
+            exit 1
+          fi
+          echo "sdk_dir=$SDK_DIR" >> $GITHUB_OUTPUT
+
+      - name: Build package with SDK
+        run: |
+          set -euxo pipefail
+          SDK_DIR='${{ steps.dl.outputs.sdk_dir }}'
+          pushd "$SDK_DIR"
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a || true
+          rm -rf package/luci-app-uninstall
+          cp -a "$GITHUB_WORKSPACE/luci-app-uninstall" package/
+          make defconfig
+          make package/luci-app-uninstall/compile -j$(nproc) V=sc || true
+          mkdir -p "$GITHUB_WORKSPACE/artifacts/${{ matrix.release }}/${{ matrix.short }}"
+          shopt -s nullglob globstar || true
+          for d in bin/packages/*/*/{luci,packages}; do
+            cp -v "$d"/luci-app-uninstall*.ipk "$GITHUB_WORKSPACE/artifacts/${{ matrix.release }}/${{ matrix.short }}/" 2>/dev/null || true
+          done
+          for d in bin/targets/**; do
+            cp -v "$d"/packages/luci-app-uninstall*.ipk "$GITHUB_WORKSPACE/artifacts/${{ matrix.release }}/${{ matrix.short }}/" 2>/dev/null || true
+          done
+          popd
 
       - name: List artifacts
         run: |
-          ls -al artifacts/${{ matrix.branch }}/${{ matrix.target }} || true
+          ls -al artifacts/${{ matrix.release }}/${{ matrix.short }} || true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: luci-app-uninstall_${{ matrix.branch }}_${{ matrix.target }}
-          path: artifacts/${{ matrix.branch }}/${{ matrix.target }}/*.ipk
+          name: luci-app-uninstall_${{ matrix.release }}_${{ matrix.short }}
+          path: artifacts/${{ matrix.release }}/${{ matrix.short }}/*.ipk
           if-no-files-found: warn
