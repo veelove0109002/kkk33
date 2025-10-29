@@ -10,9 +10,20 @@ return view.extend({
 	},
 
 
+	// Helper to fetch JSON across different LuCI versions
+	_httpJson: function(url, options) {
+		options = options || {};
+		if (L && L.Request && typeof L.Request.request === 'function') {
+			return L.Request.request(url, options).then(function(res){ return res.json(); });
+		}
+		if (typeof fetch === 'function') {
+			return fetch(url, options).then(function(res){ return res.json(); });
+		}
+		return Promise.reject(new Error('No HTTP client available'));
+	},
+
 	pollList: function() {
-		return L.fetch(L.url('admin/system/uninstall/list'), { headers: { 'Accept': 'application/json' } })
-			.then(res => res.json());
+		return this._httpJson(L.url('admin/system/uninstall/list'), { headers: { 'Accept': 'application/json' } });
 	},
 
 	render: function() {
@@ -65,11 +76,11 @@ return view.extend({
 			return ui.confirm((_('确定卸载包 %s ？').format ? _('确定卸载包 %s ？').format(name) : '确定卸载包 ' + name + ' ？'), purge ? _('同时删除配置文件。') : '').then((ok) => {
 				if (!ok) return;
 				ui.await(
-					L.fetch(L.url('admin/system/uninstall/remove'), {
+					this._httpJson(L.url('admin/system/uninstall/remove'), {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
 						body: JSON.stringify({ package: name, purge: purge })
-					}).then(res => res.json()).then(res => {
+					}).then(res => {
 						if (res && res.ok) {
 							ui.addNotification(null, E('p', {}, _('卸载成功')));
 							refresh();
