@@ -101,8 +101,18 @@ jobs:
           INSTALLER_DIR="installer/${REL}/${ARCH}"
           rm -rf "$INSTALLER_DIR"
           mkdir -p "$INSTALLER_DIR"
-          # Collect all built ipks
-          cp -v ${ART_DIR}/*.ipk "$INSTALLER_DIR"/
+
+          # Collect built ipks (handle no-match safely)
+          IPK_LIST=$(find "$ART_DIR" -maxdepth 1 -type f -name '*.ipk' | sort || true)
+          if [ -z "$IPK_LIST" ]; then
+            echo "No IPK found in $ART_DIR, skip .run packaging." >&2
+            exit 0
+          fi
+          while IFS= read -r f; do
+            cp -v "$f" "$INSTALLER_DIR"/
+          done <<EOF_LIST
+          $IPK_LIST
+          EOF_LIST
 
           # Write install script executed on target (OpenWrt)
           cat > "$INSTALLER_DIR/install.sh" << 'EOF'
@@ -122,6 +132,7 @@ jobs:
           EOF
           chmod +x "$INSTALLER_DIR/install.sh"
 
+          mkdir -p "$ART_DIR"
           RUN_NAME="luci-app-uninstall_${REL}_${ARCH}.run"
           makeself --nox11 --notemp "$INSTALLER_DIR" "${ART_DIR}/${RUN_NAME}" "luci-app-uninstall Installer (${REL}/${ARCH})" ./install.sh
 
