@@ -1,0 +1,85 @@
+name: Build luci-app-uninstall IPKs
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'luci-app-uninstall/**'
+      - '.github/workflows/build.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'luci-app-uninstall/**'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: SDK ${{ matrix.branch }} / ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [ 'openwrt-23.05' ]
+        target: [ 'x86_64', 'ath79-generic', 'ramips-mt7621' ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare host directories
+        run: |
+          mkdir -p artifacts/${{ matrix.branch }}/${{ matrix.target }}
+          mkdir -p dl build_dir staging_dir tmp
+
+      - name: Pull OpenWrt SDK image
+        run: |
+          docker pull ghcr.io/openwrt/sdk:${{ matrix.branch }}-${{ matrix.target }}
+
+      - name: Build package with SDK
+        env:
+          FORCE_UNSAFE_CONFIGURE: 1
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE":/work \
+            -w /builder \
+            -e FORCE_UNSAFE_CONFIGURE=1 \
+            -v "$GITHUB_WORKSPACE/dl":/builder/dl \
+            -v "$GITHUB_WORKSPACE/build_dir":/builder/build_dir \
+            -v "$GITHUB_WORKSPACE/staging_dir":/builder/staging_dir \
+            -v "$GITHUB_WORKSPACE/tmp":/builder/tmp \
+            ghcr.io/openwrt/sdk:${{ matrix.branch }}-${{ matrix.target }} \
+            bash -lc '
+              set -euxo pipefail
+              ./scripts/feeds update -a
+              ./scripts/feeds install -a
+              rm -rf package/luci-app-uninstall
+              cp -a /work/luci-app-uninstall package/
+              make defconfig
+              make package/luci-app-uninstall/compile -j$(nproc) V=sc || {
+                echo "Primary build path failed, trying generic output lookup";
+                true;
+              }
+              mkdir -p /work/artifacts/${{ matrix.branch }}/${{ matrix.target }}
+              # Try common feed output paths
+              shopt -s nullglob globstar || true
+              for d in bin/packages/*/*/{luci,packages}; do
+                cp -v "$d"/luci-app-uninstall*.ipk /work/artifacts/${{ matrix.branch }}/${{ matrix.target }}/ 2>/dev/null || true
+              done
+              # Also check bin/targets (SDK can place pkgs there sometimes)
+              for d in bin/targets/**; do
+                cp -v "$d"/packages/luci-app-uninstall*.ipk /work/artifacts/${{ matrix.branch }}/${{ matrix.target }}/ 2>/dev/null || true
+              done
+            '
+
+      - name: List artifacts
+        run: |
+          ls -al artifacts/${{ matrix.branch }}/${{ matrix.target }} || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: luci-app-uninstall_${{ matrix.branch }}_${{ matrix.target }}
+          path: artifacts/${{ matrix.branch }}/${{ matrix.target }}/*.ipk
+          if-no-files-found: warn

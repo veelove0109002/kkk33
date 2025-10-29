@@ -1,0 +1,18 @@
+{
+  "luci-app-uninstall": {
+    "description": "Grant access to LuCI Uninstall app",
+    "read": {
+      "cgi-io": ["luci"],
+      "file": {
+        "/etc/opkg.conf": "read",
+        "/etc/opkg/": "list"
+      }
+    },
+    "write": {
+      "cgi-io": ["luci"],
+      "ubus": {
+        "system": ["*"]
+      }
+    }
+  }
+}
