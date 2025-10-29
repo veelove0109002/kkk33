@@ -13,6 +13,9 @@ on:
       - '.github/workflows/build.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: SDK ${{ matrix.release }} / ${{ matrix.target }}
@@ -96,6 +99,26 @@ jobs:
           path: artifacts/${{ matrix.release }}/${{ matrix.short }}/*.ipk
           if-no-files-found: warn
 
+      - name: Create Git tag and GitHub Release
+        id: release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: luci-app-uninstall_${{ matrix.release }}_${{ matrix.short }}
+          name: luci-app-uninstall SDK ${{ matrix.release }} • ${{ matrix.short }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload IPKs to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/${{ matrix.release }}/${{ matrix.short }}/*.ipk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install makeself
         run: |
           set -euxo pipefail
@@ -151,9 +174,18 @@ jobs:
           set -euxo pipefail
           ls -al artifacts/${{ matrix.release }}/${{ matrix.short }} || true
 
-      - name: Upload .run installer
+      - name: Upload .run installer (artifact)
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-uninstall_run_${{ matrix.release }}_${{ matrix.short }}
           path: artifacts/${{ matrix.release }}/${{ matrix.short }}/*.run
           if-no-files-found: warn
+
+      - name: Upload .run to Release
+        if: ${{ hashFiles(format('artifacts/{0}/{1}/*.run', matrix.release, matrix.short)) != '' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/${{ matrix.release }}/${{ matrix.short }}/*.run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
