@@ -76,17 +76,39 @@ jobs:
           rm -rf package/luci-app-uninstall
           cp -a "$GITHUB_WORKSPACE/luci-app-uninstall" package/
           make defconfig
-          make package/luci-app-uninstall/compile -j$(nproc) V=sc || true
+          make package/luci-app-uninstall/compile -j$(nproc) V=sc
 
           mkdir -p "$GITHUB_WORKSPACE/artifacts/${{ matrix.release }}/${{ matrix.short }}"
-          shopt -s nullglob globstar || true
-          for d in bin/packages/*/*/{luci,packages}; do
-            cp -v "$d"/luci-app-uninstall*.ipk "$GITHUB_WORKSPACE/artifacts/${{ matrix.release }}/${{ matrix.short }}/" 2>/dev/null || true
-          done
-          for d in bin/targets/**; do
-            cp -v "$d"/packages/luci-app-uninstall*.ipk "$GITHUB_WORKSPACE/artifacts/${{ matrix.release }}/${{ matrix.short }}/" 2>/dev/null || true
-          done
+          # Collect any built ipk from anywhere under bin
+          echo "== Locate built IPKs =="
+          find bin -type f -name 'luci-app-uninstall*.ipk' -print || true
+          IPK_FOUND=$(find bin -type f -name 'luci-app-uninstall*.ipk' | wc -l || true)
+          if [ "${IPK_FOUND}" -gt 0 ]; then
+            find bin -type f -name 'luci-app-uninstall*.ipk' -exec cp -v {} "$GITHUB_WORKSPACE/artifacts/${{ matrix.release }}/${{ matrix.short }}/" \;
+          else
+            echo "No luci-app-uninstall*.ipk found under SDK/bin" >&2
+          fi
           popd
+
+      - name: Collect build logs
+        if: always()
+        run: |
+          set -euxo pipefail
+          SDK_DIR='${{ steps.dl.outputs.sdk_dir }}'
+          REL='${{ matrix.release }}'
+          ARCH='${{ matrix.short }}'
+          ART_DIR="$GITHUB_WORKSPACE/artifacts/${REL}/${ARCH}"
+          mkdir -p "$ART_DIR"
+          LOG_BUNDLE="$ART_DIR/build-logs.tgz"
+          echo "== Collect logs from $SDK_DIR =="
+          tar -czf "$LOG_BUNDLE" -C "$SDK_DIR" \
+            logs \
+            build_dir 2>/dev/null || true
+          if [ -f "$LOG_BUNDLE" ]; then
+            echo "Logs archived at $LOG_BUNDLE"
+          else
+            echo "No logs found to archive under $SDK_DIR" >&2
+          fi
 
       - name: List artifacts
         run: |
@@ -141,9 +163,8 @@ jobs:
           # Collect built ipks (handle no-match safely)
           IPK_LIST=$(find "$ART_DIR" -maxdepth 1 -type f -name '*.ipk' | sort || true)
           if [ -z "$IPK_LIST" ]; then
-            echo "No IPK found in $ART_DIR, skip .run packaging." >&2
-            echo "run_exists=0" >> "$GITHUB_OUTPUT"
-            exit 0
+            echo "No IPK found in $ART_DIR. Build probably failed earlier." >&2
+            exit 2
           fi
           while IFS= read -r f; do
             cp -v "$f" "$INSTALLER_DIR"/
