@@ -186,11 +186,12 @@ jobs:
           ls -al artifacts/${{ matrix.release }}/${{ matrix.short }} || true
 
       - name: Upload .run installer (artifact)
+        if: ${{ steps.makeself.outputs.run_exists == '1' }}
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-uninstall_run_${{ matrix.release }}_${{ matrix.short }}
-          path: artifacts/${{ matrix.release }}/${{ matrix.short }}/*.run
-          if-no-files-found: warn
+          path: ${{ steps.makeself.outputs.run_path }}
+          if-no-files-found: error
 
       - name: Upload .run to Release
         if: ${{ steps.makeself.outputs.run_exists == '1' }}
