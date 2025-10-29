@@ -59,12 +59,22 @@ jobs:
           set -euxo pipefail
           SDK_DIR='${{ steps.dl.outputs.sdk_dir }}'
           pushd "$SDK_DIR"
+
+          # Ensure luci feed exists (23.05 branch)
+          if ! grep -qE '^src-git\s+luci\b' feeds.conf.default; then
+            echo "src-git luci https://github.com/openwrt/luci.git;openwrt-23.05" >> feeds.conf.default
+          fi
+
           ./scripts/feeds update -a
+          # Install base packages and luci essentials (tolerate missing)
           ./scripts/feeds install -a || true
+          ./scripts/feeds install luci-base || true
+
           rm -rf package/luci-app-uninstall
           cp -a "$GITHUB_WORKSPACE/luci-app-uninstall" package/
           make defconfig
           make package/luci-app-uninstall/compile -j$(nproc) V=sc || true
+
           mkdir -p "$GITHUB_WORKSPACE/artifacts/${{ matrix.release }}/${{ matrix.short }}"
           shopt -s nullglob globstar || true
           for d in bin/packages/*/*/{luci,packages}; do
