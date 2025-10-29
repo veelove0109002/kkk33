@@ -71,20 +71,22 @@ return view.extend({
 			var purge = document.getElementById('purge').checked;
 			return ui.confirm((_('确定卸载包 %s ？').format ? _('确定卸载包 %s ？').format(name) : '确定卸载包 ' + name + ' ？'), purge ? _('同时删除配置文件。') : '').then((ok) => {
 				if (!ok) return;
-				ui.await(L.fetch(L.url('admin/system/uninstall/remove'), {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-					body: JSON.stringify({ package: name, purge: purge })
-				}).then(res => res.json()).then(res => {
-					if (res && res.ok) {
-						ui.addNotification(null, E('p', {}, _('卸载成功')));
-						refresh();
-					} else {
-						ui.addNotification(null, E('pre', {}, (res && res.message) || _('卸载失败')) , 'danger');
-					}
-				}).catch(err => {
-					ui.addNotification(null, E('p', {}, _('请求失败: ') + String(err)), 'danger');
-				})), _('执行中…'));
+				ui.await(
+					L.fetch(L.url('admin/system/uninstall/remove'), {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+						body: JSON.stringify({ package: name, purge: purge })
+					}).then(res => res.json()).then(res => {
+						if (res && res.ok) {
+							ui.addNotification(null, E('p', {}, _('卸载成功')));
+							refresh();
+						} else {
+							ui.addNotification(null, E('pre', {}, (res && res.message) || _('卸载失败')) , 'danger');
+						}
+					}).catch(err => {
+						ui.addNotification(null, E('p', {}, _('请求失败: ') + String(err)), 'danger');
+					})
+				, _('执行中…'));
 			});
 		}
 
