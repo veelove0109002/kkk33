@@ -6,16 +6,9 @@
 
 return view.extend({
 	load: function() {
-		return Promise.all([
-			this.callList()
-		]);
+		return Promise.resolve();
 	},
 
-	callList: rpc.declare({
-		object: 'luci',
-		method: 'getAdminMenu', // dummy to ensure rpc is loaded
-		expect: { } // not used
-	}),
 
 	pollList: function() {
 		return L.fetch(L.url('admin/system/uninstall/list'), { headers: { 'Accept': 'application/json' } })

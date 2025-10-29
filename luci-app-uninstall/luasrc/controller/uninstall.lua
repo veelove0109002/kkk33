@@ -9,8 +9,14 @@ function index()
 
 	entry({ 'admin', 'system', 'uninstall' }, view('uninstall/main'), _('Uninstall'), 90).acl_depends = { 'luci-app-uninstall' }
 
-	entry({ 'admin', 'system', 'uninstall', 'list' }, call('action_list')).leaf = true
-	entry({ 'admin', 'system', 'uninstall', 'remove' }, call('action_remove')).leaf = true
+	local e
+	e = entry({ 'admin', 'system', 'uninstall', 'list' }, call('action_list'))
+	e.leaf = true
+	e.acl_depends = { 'luci-app-uninstall' }
+
+	e = entry({ 'admin', 'system', 'uninstall', 'remove' }, call('action_remove'))
+	e.leaf = true
+	e.acl_depends = { 'luci-app-uninstall' }
 end
 
 local http = require 'luci.http'
