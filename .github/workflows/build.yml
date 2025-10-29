@@ -128,6 +128,7 @@ jobs:
           sudo apt-get install -y makeself
 
       - name: Package .run installer
+        id: makeself
         run: |
           set -euxo pipefail
           REL='${{ matrix.release }}'
@@ -141,6 +142,7 @@ jobs:
           IPK_LIST=$(find "$ART_DIR" -maxdepth 1 -type f -name '*.ipk' | sort || true)
           if [ -z "$IPK_LIST" ]; then
             echo "No IPK found in $ART_DIR, skip .run packaging." >&2
+            echo "run_exists=0" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           while IFS= read -r f; do
@@ -169,7 +171,14 @@ jobs:
 
           mkdir -p "$ART_DIR"
           RUN_NAME="luci-app-uninstall_${REL}_${ARCH}.run"
-          makeself --nox11 --notemp "$INSTALLER_DIR" "${ART_DIR}/${RUN_NAME}" "luci-app-uninstall Installer (${REL}/${ARCH})" ./install.sh
+          RUN_PATH="${ART_DIR}/${RUN_NAME}"
+          makeself --nox11 --notemp "$INSTALLER_DIR" "$RUN_PATH" "luci-app-uninstall Installer (${REL}/${ARCH})" ./install.sh
+          if [ -f "$RUN_PATH" ]; then
+            echo "run_exists=1" >> "$GITHUB_OUTPUT"
+            echo "run_path=$RUN_PATH" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_exists=0" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: List artifacts after .run
         run: |
@@ -184,12 +193,12 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload .run to Release
-        if: ${{ hashFiles(format('artifacts/{0}/{1}/*.run', matrix.release, matrix.short)) != '' }}
+        if: ${{ steps.makeself.outputs.run_exists == '1' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: luci-app-uninstall_${{ matrix.release }}_${{ matrix.short }}
           files: |
-            artifacts/${{ matrix.release }}/${{ matrix.short }}/*.run
+            ${{ steps.makeself.outputs.run_path }}
           token: ${{ secrets.GITHUB_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
