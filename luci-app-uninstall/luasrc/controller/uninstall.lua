@@ -72,16 +72,13 @@ function action_list()
 		end
 	end
 
-	-- only keep luci-app-* packages
-	local only = {}
+	-- mark whether package looks like a LuCI app, but return all installed packages
 	for _, p in ipairs(pkgs) do
-		if p.name and p.name:match('^luci%-app%-') then
-			only[#only+1] = p
-		end
+		p.is_app = (p.name and p.name:match('^luci%-app%-')) and true or false
 	end
 	-- sort by name
-	table.sort(only, function(a,b) return a.name < b.name end)
-	json_response({ packages = only, count = #only })
+	table.sort(pkgs, function(a,b) return a.name < b.name end)
+	json_response({ packages = pkgs, count = #pkgs })
 end
 
 local function collect_conffiles(pkg)
