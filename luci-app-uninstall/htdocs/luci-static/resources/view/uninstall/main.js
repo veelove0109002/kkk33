@@ -78,7 +78,7 @@ return view.extend({
 			self.pollList().then(function(data){
 				var pkgs = (data && data.packages) || [];
 				var q = (document.getElementById('filter').value || '').toLowerCase();
-				var list = pkgs.filter(function(p){ return !q || p.name.toLowerCase().includes(q); });
+				var list = pkgs.filter(function(p){ return p.name && p.name.indexOf('luci-app-') === 0; }).filter(function(p){ return !q || p.name.toLowerCase().includes(q); });
 				// Clear grid
 				while (grid.firstChild) grid.removeChild(grid.firstChild);
 				list.forEach(function(p){ grid.appendChild(renderCard(p)); });
