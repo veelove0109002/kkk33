@@ -36,7 +36,7 @@
         .then(function (data) {
           var pkgs = (data && data.packages) || [];
           var q = (document.getElementById('filter').value || '').toLowerCase();
-          var list = pkgs.filter(function (p) { return !q || p.name.toLowerCase().includes(q); });
+          var list = pkgs.filter(function (p) { return p && p.name; }).filter(function (p) { return !q || p.name.toLowerCase().includes(q); });
           while (grid.firstChild) grid.removeChild(grid.firstChild);
           list.forEach(function (p) { grid.appendChild(renderCard(p)); });
         })

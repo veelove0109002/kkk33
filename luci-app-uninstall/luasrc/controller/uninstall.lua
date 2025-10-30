@@ -220,13 +220,29 @@ function action_remove()
 		files = collect_conffiles(pkg)
 	end
 
-	-- 尝试停止 init 脚本
+	-- 尝试停止 init 脚本（兼容 luci-app- 前缀）
+	local app = pkg:match('^luci%-app%-(.+)$')
 	sys.call(string.format("/etc/init.d/%q stop >/dev/null 2>&1", pkg))
+	if app then
+		sys.call(string.format("/etc/init.d/%q stop >/dev/null 2>&1", app))
+		-- 尝试卸载对应的语言包（如 luci-i18n-<app>-zh-cn 等）
+		local status_path = fs.stat('/usr/lib/opkg/status') and '/usr/lib/opkg/status' or (fs.stat('/var/lib/opkg/status') and '/var/lib/opkg/status' or nil)
+		if status_path then
+			local s = fs.readfile(status_path) or ''
+			for name in s:gmatch('Package:%s*(luci%-i18n%-' .. app .. '%-[%w%-%_]+)') do
+				sys.call(string.format("opkg remove '%s' >/dev/null 2>&1", name))
+			end
+		end
+	end
 
-	-- 卸载包
-	local cmd = string.format("opkg remove --autoremove '%s' 2>&1", pkg)
-	local output = sys.exec(cmd)
-	local success = (output and not output:lower():match('not installed')) and (not output:lower():match('failed'))
+	-- 卸载包（依据退出码判断成功）
+	local tmpout = '/tmp/opkg-remove-output.txt'
+	local cmd = string.format("opkg remove --autoremove '%s' >%s 2>&1", pkg, tmpout)
+	local rc = sys.call(cmd)
+	local output = fs.readfile(tmpout) or ''
+	local success = (rc == 0)
+	-- 自动清理未使用依赖
+	sys.call('opkg autoremove >/dev/null 2>&1')
 
 	local removed_confs = {}
 	if purge then
