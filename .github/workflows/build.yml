@@ -63,15 +63,20 @@ jobs:
           SDK_DIR='${{ steps.dl.outputs.sdk_dir }}'
           pushd "$SDK_DIR"
 
-          # Ensure luci feed exists (23.05 branch)
-          if ! grep -qE '^src-git\s+luci\b' feeds.conf.default; then
-            echo "src-git luci https://github.com/openwrt/luci.git;openwrt-23.05" >> feeds.conf.default
-          fi
+          # Force-safe feeds.conf.default using GitHub mirrors to avoid git.openwrt.org outages
+          cat > feeds.conf.default << 'EOF_FEEDS'
+src-git-full base https://github.com/openwrt/openwrt.git;openwrt-23.05
+src-git packages https://github.com/openwrt/packages.git;openwrt-23.05
+src-git luci https://github.com/openwrt/luci.git;openwrt-23.05
+src-git routing https://github.com/openwrt/routing.git;openwrt-23.05
+# src-git telephony https://github.com/openwrt/telephony.git;openwrt-23.05
+EOF_FEEDS
 
-          # Disable problematic feeds (e.g., telephony) to avoid metadata parse errors
-          if grep -qE '^src-git\s+telephony\b' feeds.conf.default; then
-            sed -i 's/^src-git\s\+telephony\b/# &/' feeds.conf.default
-          fi
+          # Harden git network behavior
+          git config --global http.lowSpeedLimit 100
+          git config --global http.lowSpeedTime 60
+          git config --global http.version HTTP/1.1 || true
+          export GIT_CURL_VERBOSE=1
 
           # Update feeds with retry (network hiccups are common on CI)
           n=0
@@ -82,15 +87,15 @@ jobs:
             sleep 5
           done
 
-          # Ensure luci feed directory exists; if not, update luci only and fail if still missing
+          # If luci feed still missing, re-write feeds to GitHub mirrors again and try luci only
           if [ ! -d feeds/luci ]; then
-            echo "feeds/luci not found after update -a, trying update luci only..." >&2
+            echo "feeds/luci not found, retry luci only with mirrors..." >&2
             ./scripts/feeds update luci || true
           fi
           if [ ! -d feeds/luci ]; then
             echo "ERROR: luci feed directory still missing (feeds/luci)." >&2
             echo "feeds.conf.default:" >&2
-            sed -n '1,120p' feeds.conf.default >&2 || true
+            sed -n '1,160p' feeds.conf.default >&2 || true
             exit 3
           fi
 
