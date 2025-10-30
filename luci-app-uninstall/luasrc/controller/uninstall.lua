@@ -39,22 +39,24 @@ end
 function action_list()
 	local pkgs = {}
 
-	-- Prefer parsing status file directly for stability
+	-- Prefer parsing status file directly for stability (only include installed packages)
 	local function parse_status(path)
 		local s = fs.readfile(path)
 		if not s or #s == 0 then return end
-		local name, ver
+		local name, ver, is_installed
 		for line in s:gmatch("[^\n\r]*") do
 			local n = line:match("^Package:%s*(.+)$")
 			if n then
-				-- starting a new record, flush previous if exists
-				if name then pkgs[#pkgs+1] = { name = name, version = ver or '' } end
-				name, ver = n, nil
+				-- starting a new record, flush previous if exists and installed
+				if name and is_installed then pkgs[#pkgs+1] = { name = name, version = ver or '' } end
+				name, ver, is_installed = n, nil, false
 			end
 			local v = line:match("^Version:%s*(.+)$")
 			if v then ver = v end
+			local st = line:match("^Status:%s*(.+)$")
+			if st and st:match("installed") then is_installed = true end
 		end
-		if name then pkgs[#pkgs+1] = { name = name, version = ver or '' } end
+		if name and is_installed then pkgs[#pkgs+1] = { name = name, version = ver or '' } end
 	end
 
 	if fs.stat('/usr/lib/opkg/status') then
