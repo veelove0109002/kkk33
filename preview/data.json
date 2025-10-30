@@ -1,10 +1,9 @@
 {
   "packages": [
-    { "name": "luci", "version": "23.05.3-1" },
-    { "name": "luci-base", "version": "23.05.3-2" },
-    { "name": "opkg", "version": "2025-01-01" },
+    { "name": "luci-app-ddnsto", "version": "2.0.0" },
+    { "name": "luci-app-upnp", "version": "1.0.3" },
+    { "name": "luci-app-adguardhome", "version": "0.6.2" },
     { "name": "luci-app-uninstall", "version": "0.1.0" },
-    { "name": "busybox", "version": "1.36.1-2" },
-    { "name": "dnsmasq", "version": "2.89-5" }
+    { "name": "luci-app-pppoe", "version": "3.2.1" }
   ]
 }

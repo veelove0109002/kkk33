@@ -13,15 +13,22 @@
       ])
     ]);
 
-    var table = E('table', { 'class': 'table' }, [
-      E('tr', {}, [
-        E('th', {}, _('包名')),
-        E('th', {}, _('版本')),
-        E('th', {}, '')
-      ])
-    ]);
+    // 卡片栅格
+    var grid = E('div', { 'class': 'card-grid' });
+    root.appendChild(grid);
 
-    root.appendChild(table);
+    var DEFAULT_ICON = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2" ry="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>');
+    function packageIcon(name){ return L.resource('icons/' + name + '.png'); }
+
+    function renderCard(pkg){
+      var img = E('img', { src: packageIcon(pkg.name), alt: pkg.name });
+      img.addEventListener('error', function(){ img.src = DEFAULT_ICON; });
+      var title = E('div', { 'class': 'pkg-title' }, pkg.name);
+      var ver = E('div', { 'class': 'pkg-ver' }, (pkg.version || ''));
+      var btn = E('button', { 'class': 'btn cbi-button cbi-button-remove' }, _('卸载'));
+      btn.addEventListener('click', function(){ uninstall(pkg.name); });
+      return E('div', { 'class': 'pkg-card' }, [img, title, ver, btn]);
+    }
 
     function refresh() {
       L.fetch(L.url('admin/system/uninstall/list'), { headers: { 'Accept': 'application/json' } })
@@ -29,18 +36,9 @@
         .then(function (data) {
           var pkgs = (data && data.packages) || [];
           var q = (document.getElementById('filter').value || '').toLowerCase();
-          var tbody = E('tbody', {});
-          pkgs.filter(function (p) { return !q || p.name.toLowerCase().includes(q); }).forEach(function (p) {
-            var btn = E('button', { 'class': 'btn cbi-button cbi-button-remove', click: function () { uninstall(p.name); } }, _('卸载'));
-            tbody.appendChild(E('tr', {}, [
-              E('td', {}, p.name),
-              E('td', {}, p.version || ''),
-              E('td', { 'style': 'text-align:right;' }, btn)
-            ]));
-          });
-          var old = table.querySelector('tbody');
-          if (old) old.remove();
-          table.appendChild(tbody);
+          var list = pkgs.filter(function (p) { return !q || p.name.toLowerCase().includes(q); });
+          while (grid.firstChild) grid.removeChild(grid.firstChild);
+          list.forEach(function (p) { grid.appendChild(renderCard(p)); });
         })
         .catch(function (err) {
           ui.addNotification(null, E('p', {}, _('加载软件包列表失败: ') + String(err)), 'danger');
@@ -52,7 +50,6 @@
       ui.await(
         ui.confirm('确定卸载包 ' + name + ' ？', purge ? '同时删除配置文件。' : '').then(function (ok) {
           if (!ok) return;
-          // 预览环境只做提示
           ui.addNotification(null, E('p', {}, '模拟卸载：' + name + (purge ? '（含配置）' : '')), null);
         })
       );

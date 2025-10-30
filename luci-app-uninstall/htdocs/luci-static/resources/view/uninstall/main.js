@@ -44,34 +44,36 @@ return view.extend({
 			])
 		]);
 
-		var table = E('table', { 'class': 'table' }, [
-			E('tr', {}, [
-				E('th', {}, _('包名')),
-				E('th', {}, _('版本')),
-				E('th', {}, '')
-			])
-		]);
+		// Default icon (inline SVG as data URI)
+		var DEFAULT_ICON = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2" ry="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>');
+		function packageIcon(name){
+			// Try common icon path under luci-static/resources/icons
+			return L.resource('icons/' + name + '.png');
+		}
 
-		root.appendChild(table);
+		var grid = E('div', { 'class': 'card-grid', 'style': 'display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:8px;' });
+		root.appendChild(grid);
+
+		function renderCard(pkg){
+			var img = E('img', { src: packageIcon(pkg.name), alt: pkg.name, width: 48, height: 48, 'style': 'border-radius:8px;background:#f3f4f6;object-fit:contain;' });
+			img.addEventListener('error', function(){ img.src = DEFAULT_ICON; });
+			var title = E('div', { 'style': 'font-weight:600;color:#111827;margin-top:6px;word-break:break-all;' }, pkg.name);
+			var ver = E('div', { 'style': 'font-size:12px;color:#6b7280;margin-top:2px;' }, (pkg.version || ''));
+			var btn = E('button', { 'class': 'btn cbi-button cbi-button-remove', 'style': 'margin-top:8px;' }, _('卸载'));
+			btn.addEventListener('click', function(){ uninstall(pkg.name); });
+			var card = E('div', { 'class': 'pkg-card', 'style': 'display:flex;flex-direction:column;align-items:flex-start;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.04);' }, [img, title, ver, btn]);
+			return card;
+		}
 
 		function refresh() {
-			self.pollList().then(data => {
+			self.pollList().then(function(data){
 				var pkgs = (data && data.packages) || [];
 				var q = (document.getElementById('filter').value || '').toLowerCase();
-				var tbody = E('tbody', {});
-				pkgs.filter(p => !q || p.name.toLowerCase().includes(q)).forEach(p => {
-					var btn = E('button', { 'class': 'btn cbi-button cbi-button-remove' }, _('卸载'));
-					btn.addEventListener('click', function(){ uninstall(p.name); });
-					tbody.appendChild(E('tr', {}, [
-						E('td', {}, p.name),
-						E('td', {}, p.version || ''),
-						E('td', { 'style': 'text-align:right;' }, btn)
-					]));
-				});
-				var old = table.querySelector('tbody');
-				if (old) old.remove();
-				table.appendChild(tbody);
-			}).catch(err => {
+				var list = pkgs.filter(function(p){ return !q || p.name.toLowerCase().includes(q); });
+				// Clear grid
+				while (grid.firstChild) grid.removeChild(grid.firstChild);
+				list.forEach(function(p){ grid.appendChild(renderCard(p)); });
+			}).catch(function(err){
 				ui.addNotification(null, E('p', {}, _('加载软件包列表失败: ') + String(err)), 'danger');
 			});
 		}
