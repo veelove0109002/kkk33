@@ -17,7 +17,11 @@ return view.extend({
 			return L.Request.request(url, options).then(function(res){ return res.json(); });
 		}
 		if (typeof fetch === 'function') {
-			return fetch(url, options).then(function(res){ return res.json(); });
+			options.credentials = 'include';
+			return fetch(url, options).then(function(res){
+				if (!res.ok) throw new Error('HTTP ' + res.status);
+				return res.json();
+			});
 		}
 		return Promise.reject(new Error('No HTTP client available'));
 	},
@@ -76,7 +80,8 @@ return view.extend({
 			return ui.confirm((_('确定卸载包 %s ？').format ? _('确定卸载包 %s ？').format(name) : '确定卸载包 ' + name + ' ？'), purge ? _('同时删除配置文件。') : '').then((ok) => {
 				if (!ok) return;
 				ui.await(
-					self._httpJson(L.url('admin/system/uninstall/remove'), {
+					var removeUrl = L.url('admin/system/uninstall/remove') + (L.env && L.env.csrf_token ? ('?token=' + encodeURIComponent(L.env.csrf_token)) : '');
+					self._httpJson(removeUrl, {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
 						body: JSON.stringify({ package: name, purge: purge })
