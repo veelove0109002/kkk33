@@ -76,7 +76,7 @@ return view.extend({
 			return ui.confirm((_('确定卸载包 %s ？').format ? _('确定卸载包 %s ？').format(name) : '确定卸载包 ' + name + ' ？'), purge ? _('同时删除配置文件。') : '').then((ok) => {
 				if (!ok) return;
 				ui.await(
-					this._httpJson(L.url('admin/system/uninstall/remove'), {
+					self._httpJson(L.url('admin/system/uninstall/remove'), {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
 						body: JSON.stringify({ package: name, purge: purge })
