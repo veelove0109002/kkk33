@@ -145,17 +145,19 @@ local function remove_confs(files)
 end
 
 function action_remove()
-	local body = http.content() or ''
-	local data = nil
-	if body and #body > 0 then
-		data = json.parse(body)
-	end
-	local pkg = data and data.package or http.formvalue('package')
-	local purge = false
-	if data and data.purge ~= nil then
-		purge = data.purge and true or false
-	else
-		purge = http.formvalue('purge') == '1'
+	-- 优先从表单获取参数，避免读取原始内容后导致表单解析失效
+	local pkg = http.formvalue('package')
+	local purge = (http.formvalue('purge') == '1')
+	-- 若表单未提供，则尝试解析 JSON 请求体
+	if (not pkg or pkg == '') then
+		local body = http.content() or ''
+		if body and #body > 0 then
+			local ok, data = pcall(json.parse, body)
+			if ok and data then
+				pkg = data.package or pkg
+				if data.purge ~= nil then purge = data.purge and true or false end
+			end
+		end
 	end
 
 	if not pkg or pkg == '' then
@@ -257,11 +259,25 @@ function action_remove()
 
 	-- 卸载包（依据退出码判断成功）
 	local tmpout = '/tmp/opkg-remove-output.txt'
+	local function run_remove(cmd)
+		local rc = sys.call(cmd)
+		local out = fs.readfile(tmpout) or ''
+		return rc, out
+	end
+	-- 先尝试正常卸载
 	local cmd = string.format("opkg remove --autoremove '%s' >%s 2>&1", pkg, tmpout)
-	local rc = sys.call(cmd)
-	local output = fs.readfile(tmpout) or ''
-	-- 成功判定：优先看退出码，然后以状态文件为准兜底
+	local rc, output = run_remove(cmd)
 	local success = (rc == 0) or (not is_installed(pkg))
+	-- 若提示依赖阻塞，则强制卸载（仅针对 luci-app-*）
+	if (not success) then
+		local is_app = pkg:match('^luci%-app%-.+') ~= nil
+		local dependent_warn = output:lower():match('dependent') or output:match('print_dependents_warning')
+		if is_app and dependent_warn then
+			local force_cmd = string.format("opkg remove --autoremove --force-depends --force-removal-of-dependent-packages '%s' >%s 2>&1", pkg, tmpout)
+			rc, output = run_remove(force_cmd)
+			success = (rc == 0) or (not is_installed(pkg))
+		end
+	end
 	-- 自动清理未使用依赖
 	sys.call('opkg autoremove >/dev/null 2>&1')
 
