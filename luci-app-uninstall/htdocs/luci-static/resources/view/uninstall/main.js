@@ -27,7 +27,16 @@ return view.extend({
 	},
 
 	pollList: function() {
-		return this._httpJson(L.url('admin/system/uninstall/list'), { headers: { 'Accept': 'application/json' } });
+		var self = this;
+		function once(){ return self._httpJson(L.url('admin/system/uninstall/list'), { headers: { 'Accept': 'application/json' } }); }
+		return once().then(function(res){
+			if (res && res.packages && res.packages.length > 0) return res;
+			// retry up to 2 times with small delay
+			return new Promise(function(resolve){ setTimeout(resolve, 300); }).then(once).then(function(r){
+				if (r && r.packages && r.packages.length > 0) return r;
+				return new Promise(function(resolve){ setTimeout(resolve, 500); }).then(once);
+			});
+		});
 	},
 
 	render: function() {

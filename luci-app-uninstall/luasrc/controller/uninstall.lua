@@ -38,47 +38,40 @@ end
 
 function action_list()
 	local pkgs = {}
-	local ok, list = pcall(ipkg.list_installed)
-	if ok and list then
-		for name, meta in pairs(list) do
-			pkgs[#pkgs+1] = {
-				name = name,
-				version = meta and meta.Version or '',
-				size = meta and meta.Size or 0
-			}
+
+	-- Prefer parsing status file directly for stability
+	local function parse_status(path)
+		local s = fs.readfile(path)
+		if not s or #s == 0 then return end
+		local name, ver
+		for line in s:gmatch("[^\n]+") do
+			local n = line:match("^Package:%s*(.+)$")
+			if n then name = n end
+			local v = line:match("^Version:%s*(.+)$")
+			if v then ver = v end
+			if line == '' and name then
+				pkgs[#pkgs+1] = { name = name, version = ver or '' }
+				name, ver = nil, nil
+			end
 		end
+		if name then pkgs[#pkgs+1] = { name = name, version = ver or '' } end
 	end
+
+	if fs.stat('/usr/lib/opkg/status') then
+		parse_status('/usr/lib/opkg/status')
+	elseif fs.stat('/var/lib/opkg/status') then
+		parse_status('/var/lib/opkg/status')
+	end
+
 	if #pkgs == 0 then
-		-- Fallback 1: parse `opkg list-installed`
+		-- Fallback: `opkg list-installed`
 		local out = sys.exec("opkg list-installed 2>/dev/null") or ''
 		for line in out:gmatch("[^\n]+") do
 			local n, v = line:match("^([^%s]+)%s+-%s+(.+)$")
-			if n then
-				pkgs[#pkgs+1] = { name = n, version = v or '' }
-			end
+			if n then pkgs[#pkgs+1] = { name = n, version = v or '' } end
 		end
 	end
-	if #pkgs == 0 then
-		-- Fallback 2: parse status file directly
-		local function parse_status(path)
-			local s = fs.readfile(path)
-			if not s or #s == 0 then return end
-			local name, ver
-			for line in s:gmatch("[^\n]+") do
-				local n = line:match("^Package:%s*(.+)$")
-				if n then name = n end
-				local v = line:match("^Version:%s*(.+)$")
-				if v then ver = v end
-				if line == '' and name then
-					pkgs[#pkgs+1] = { name = name, version = ver or '' }
-					name, ver = nil, nil
-				end
-			end
-			if name then pkgs[#pkgs+1] = { name = name, version = ver or '' } end
-		end
-		parse_status('/var/lib/opkg/status')
-		if #pkgs == 0 then parse_status('/usr/lib/opkg/status') end
-	end
+
 	-- only keep luci-app-* packages
 	local only = {}
 	for _, p in ipairs(pkgs) do
@@ -88,7 +81,7 @@ function action_list()
 	end
 	-- sort by name
 	table.sort(only, function(a,b) return a.name < b.name end)
-	json_response({ packages = only })
+	json_response({ packages = only, count = #only })
 end
 
 local function collect_conffiles(pkg)
