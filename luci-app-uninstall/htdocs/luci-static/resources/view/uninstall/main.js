@@ -45,15 +45,7 @@ return view.extend({
 			E('h2', {}, _('Uninstall Packages')),
 			E('div', { 'class': 'cbi-section-descr' }, _('选择要卸载的已安装软件包。可选地同时删除其配置文件。')),
 			E('div', { 'style': 'margin:8px 0; display:flex; gap:8px; align-items:center;' }, [
-				E('input', { id: 'filter', type: 'text', placeholder: _('筛选包名…'), 'style': 'flex:1;' }),
-				E('label', { 'style': 'display:flex; align-items:center; gap:6px;' }, [
-					E('input', { id: 'purge', type: 'checkbox' }),
-					_('删除配置文件')
-				]),
-				E('label', { 'style': 'display:flex; align-items:center; gap:6px;' }, [
-					E('input', { id: 'removeDeps', type: 'checkbox' }),
-					_('同时卸载相关依赖')
-				])
+				E('input', { id: 'filter', type: 'text', placeholder: _('筛选包名…'), 'style': 'flex:1;' })
 			])
 		]);
 
@@ -72,9 +64,14 @@ return view.extend({
 			img.addEventListener('error', function(){ img.src = DEFAULT_ICON; });
 			var title = E('div', { 'style': 'font-weight:600;color:#111827;margin-top:6px;word-break:break-all;' }, pkg.name);
 			var ver = E('div', { 'style': 'font-size:12px;color:#6b7280;margin-top:2px;' }, (pkg.version || ''));
+			var purgeEl = E('input', { type: 'checkbox' });
+			var purgeLabel = E('label', { 'style': 'display:flex; align-items:center; gap:6px;' }, [ purgeEl, _('删除配置文件') ]);
+			var depsEl = E('input', { type: 'checkbox' });
+			var depsLabel = E('label', { 'style': 'display:flex; align-items:center; gap:6px;' }, [ depsEl, _('同时卸载相关依赖') ]);
+			var optionsRow = E('div', { 'style': 'margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;' }, [ purgeLabel, depsLabel ]);
 			var btn = E('button', { type: 'button', 'class': 'btn cbi-button cbi-button-remove', 'style': 'margin-top:8px;' }, _('卸载'));
-			btn.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); uninstall(pkg.name); });
-			var card = E('div', { 'class': 'pkg-card', 'style': 'display:flex;flex-direction:column;align-items:flex-start;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.04);' }, [img, title, ver, btn]);
+			btn.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); uninstall(pkg.name, purgeEl.checked, depsEl.checked); });
+			var card = E('div', { 'class': 'pkg-card', 'style': 'display:flex;flex-direction:column;align-items:flex-start;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.04);' }, [img, title, ver, optionsRow, btn]);
 			return card;
 		}
 
@@ -91,8 +88,7 @@ return view.extend({
 			});
 		}
 
-		function uninstall(name) {
-			var purge = document.getElementById('purge').checked;
+		function uninstall(name, purge, removeDeps) {
 			var confirmFn = (ui && typeof ui.confirm === 'function') ? ui.confirm : function(msg, desc){ return Promise.resolve(window.confirm(desc ? (msg + '\n' + desc) : msg)); };
 			return confirmFn((_('确定卸载包 %s ？').format ? _('确定卸载包 %s ？').format(name) : '确定卸载包 ' + name + ' ？'), purge ? _('同时删除配置文件。') : '').then(function(ok) {
 				if (!ok) return;
@@ -109,7 +105,7 @@ return view.extend({
 
 				var token = (L.env && (L.env.token || L.env.csrf_token)) || '';
 				var removeUrl = L.url('admin/system/uninstall/remove') + (token ? ('?token=' + encodeURIComponent(token)) : '');
-				var formBody = 'package=' + encodeURIComponent(name) + '&purge=' + (purge ? '1' : '0') + '&removeDeps=' + (document.getElementById('removeDeps').checked ? '1' : '0');
+				var formBody = 'package=' + encodeURIComponent(name) + '&purge=' + (purge ? '1' : '0') + '&removeDeps=' + (removeDeps ? '1' : '0');
 
 				println('> POST ' + removeUrl);
 				println('> body: ' + formBody);
@@ -128,7 +124,7 @@ return view.extend({
 					println('! POST 失败或返回非成功，尝试 GET…');
 					var q = L.url('admin/system/uninstall/remove') + '?' +
 						(token ? ('token=' + encodeURIComponent(token) + '&') : '') +
-						('package=' + encodeURIComponent(name) + '&purge=' + (purge ? '1' : '0'));
+						('package=' + encodeURIComponent(name) + '&purge=' + (purge ? '1' : '0') + '&removeDeps=' + (removeDeps ? '1' : '0'));
 					println('> GET ' + q);
 					return self._httpJson(q, { method: 'GET', headers: { 'Accept': 'application/json' } }).then(function(r2){
 						println('< Response: ' + JSON.stringify(r2));
