@@ -68,8 +68,8 @@ return view.extend({
 			img.addEventListener('error', function(){ img.src = DEFAULT_ICON; });
 			var title = E('div', { 'style': 'font-weight:600;color:#111827;margin-top:6px;word-break:break-all;' }, pkg.name);
 			var ver = E('div', { 'style': 'font-size:12px;color:#6b7280;margin-top:2px;' }, (pkg.version || ''));
-			var btn = E('button', { 'class': 'btn cbi-button cbi-button-remove', 'style': 'margin-top:8px;' }, _('卸载'));
-			btn.addEventListener('click', function(){ uninstall(pkg.name); });
+			var btn = E('button', { type: 'button', 'class': 'btn cbi-button cbi-button-remove', 'style': 'margin-top:8px;' }, _('卸载'));
+			btn.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); uninstall(pkg.name); });
 			var card = E('div', { 'class': 'pkg-card', 'style': 'display:flex;flex-direction:column;align-items:flex-start;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.04);' }, [img, title, ver, btn]);
 			return card;
 		}
