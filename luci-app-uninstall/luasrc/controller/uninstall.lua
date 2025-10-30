@@ -115,6 +115,38 @@ local function is_installed(pkg)
 	return (name == pkg and installed) and true or false
 end
 
+-- 收集需要一起卸载的关联/依赖包
+local function collect_related_packages(pkg)
+	local related = {}
+	local app = pkg:match('^luci%-app%-(.+)$')
+	-- whatdepends: 反向依赖者列表
+	local wd = sys.exec(string.format("opkg whatdepends '%s' 2>/dev/null", pkg)) or ''
+	for line in wd:gmatch("[^\n]+") do
+		local name = line:match("^%s*([^%s]+)%s*$")
+		if name and name ~= pkg then related[#related+1] = name end
+	end
+	-- 基于模式的常见关联包
+	if app then
+		-- 语言包
+		local status_path = fs.stat('/usr/lib/opkg/status') and '/usr/lib/opkg/status' or (fs.stat('/var/lib/opkg/status') and '/var/lib/opkg/status' or nil)
+		if status_path then
+			local s = fs.readfile(status_path) or ''
+			for name in s:gmatch('Package:%s*(luci%-i18n%-' .. app .. '%-[%w%-%_]+)') do
+				related[#related+1] = name
+			end
+		end
+		-- meta 包和本体
+		related[#related+1] = 'app-meta-' .. app
+		related[#related+1] = app
+	end
+	-- 去重
+	local seen, uniq = {}, {}
+	for _, n in ipairs(related) do
+		if n and not seen[n] then seen[n] = true; uniq[#uniq+1] = n end
+	end
+	return uniq
+end
+
 local function remove_confs(files)
 	local removed = {}
 	for _, f in ipairs(files or {}) do
@@ -278,6 +310,17 @@ function action_remove()
 			local force_cmd = string.format("opkg remove --autoremove --force-depends --force-removal-of-dependent-packages '%s' >%s 2>&1", pkg, tmpout)
 			rc, output = run_remove(force_cmd)
 			success = (rc == 0) or (not is_installed(pkg))
+		end
+	end
+	-- 若选择同时卸载依赖且目标包已卸载成功，则继续卸载关联包
+	if success and remove_deps then
+		local rel = collect_related_packages(pkg)
+		for _, name in ipairs(rel) do
+			if is_installed(name) then
+				local cmd2 = string.format("opkg remove --autoremove --force-depends --force-removal-of-dependent-packages '%s' >%s 2>&1", name, tmpout)
+				local rc2, out2 = run_remove(cmd2)
+				output = (output or '') .. "\n[dep] " .. (out2 or '')
+			end
 		end
 	end
 	-- 自动清理未使用依赖
