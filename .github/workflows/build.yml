@@ -64,13 +64,12 @@ jobs:
           pushd "$SDK_DIR"
 
           # Force-safe feeds.conf.default using GitHub mirrors to avoid git.openwrt.org outages
-          cat > feeds.conf.default << 'EOF_FEEDS'
-src-git-full base https://github.com/openwrt/openwrt.git;openwrt-23.05
-src-git packages https://github.com/openwrt/packages.git;openwrt-23.05
-src-git luci https://github.com/openwrt/luci.git;openwrt-23.05
-src-git routing https://github.com/openwrt/routing.git;openwrt-23.05
-# src-git telephony https://github.com/openwrt/telephony.git;openwrt-23.05
-EOF_FEEDS
+          rm -f feeds.conf.default
+          printf "%s\n" 'src-git-full base https://github.com/openwrt/openwrt.git;openwrt-23.05' > feeds.conf.default
+          printf "%s\n" 'src-git packages https://github.com/openwrt/packages.git;openwrt-23.05' >> feeds.conf.default
+          printf "%s\n" 'src-git luci https://github.com/openwrt/luci.git;openwrt-23.05' >> feeds.conf.default
+          printf "%s\n" 'src-git routing https://github.com/openwrt/routing.git;openwrt-23.05' >> feeds.conf.default
+          printf "%s\n" '# src-git telephony https://github.com/openwrt/telephony.git;openwrt-23.05' >> feeds.conf.default
 
           # Harden git network behavior
           git config --global http.lowSpeedLimit 100
@@ -155,7 +154,7 @@ EOF_FEEDS
         uses: softprops/action-gh-release@v2
         with:
           tag_name: luci-app-uninstall_${{ matrix.release }}_${{ matrix.short }}
-          name: luci-app-uninstall SDK ${{ matrix.release }} • ${{ matrix.short }}
+          name: luci-app-uninstall SDK ${{ matrix.release }} - ${{ matrix.short }}
           draft: false
           prerelease: false
           generate_release_notes: true
