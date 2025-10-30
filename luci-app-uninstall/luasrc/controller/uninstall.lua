@@ -43,6 +43,16 @@ function action_list()
 				size = meta and meta.Size or 0
 			}
 		end
+	else
+		-- Fallback: parse `opkg list-installed`
+		local out = sys.exec("opkg list-installed 2>/dev/null") or ''
+		for line in out:gmatch("[^\n]+") do
+			-- format: <name> - <version>
+			local n, v = line:match("^([^%s]+)%s+-%s+(.+)$")
+			if n then
+				pkgs[#pkgs+1] = { name = n, version = v or '' }
+			end
+		end
 	end
 	-- sort by name
 	table.sort(pkgs, function(a,b) return a.name < b.name end)

@@ -5,7 +5,11 @@
       "cgi-io": ["luci"],
       "file": {
         "/etc/opkg.conf": "read",
-        "/etc/opkg/": "list"
+        "/etc/opkg/": "list",
+        "/usr/lib/opkg/status": "read",
+        "/usr/lib/opkg/": "list",
+        "/var/lib/opkg/status": "read",
+        "/var/lib/opkg/": "list"
       }
     },
     "write": {
