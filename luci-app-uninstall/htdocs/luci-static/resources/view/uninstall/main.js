@@ -77,25 +77,23 @@ return view.extend({
 
 		function uninstall(name) {
 			var purge = document.getElementById('purge').checked;
-			return ui.confirm((_('确定卸载包 %s ？').format ? _('确定卸载包 %s ？').format(name) : '确定卸载包 ' + name + ' ？'), purge ? _('同时删除配置文件。') : '').then((ok) => {
+			return ui.confirm((_('确定卸载包 %s ？').format ? _('确定卸载包 %s ？').format(name) : '确定卸载包 ' + name + ' ？'), purge ? _('同时删除配置文件。') : '').then(function(ok) {
 				if (!ok) return;
-				ui.await((function(){
-					var removeUrl = L.url('admin/system/uninstall/remove') + (L.env && L.env.csrf_token ? ('?token=' + encodeURIComponent(L.env.csrf_token)) : '');
-					return self._httpJson(removeUrl, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-						body: JSON.stringify({ package: name, purge: purge })
-					});})(), _('执行中…')).then(res => {
-						if (res && res.ok) {
-							ui.addNotification(null, E('p', {}, _('卸载成功')));
-							refresh();
-						} else {
-							ui.addNotification(null, E('pre', {}, (res && res.message) || _('卸载失败')) , 'danger');
-						}
-					}).catch(err => {
-						ui.addNotification(null, E('p', {}, _('请求失败: ') + String(err)), 'danger');
-					})
-				, _('执行中…'));
+				var removeUrl = L.url('admin/system/uninstall/remove') + (L.env && L.env.csrf_token ? ('?token=' + encodeURIComponent(L.env.csrf_token)) : '');
+				return ui.await(self._httpJson(removeUrl, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+					body: JSON.stringify({ package: name, purge: purge })
+				}), _('执行中…')).then(function(res) {
+					if (res && res.ok) {
+						ui.addNotification(null, E('p', {}, _('卸载成功')));
+						refresh();
+					} else {
+						ui.addNotification(null, E('pre', {}, (res && res.message) || _('卸载失败')), 'danger');
+					}
+				}).catch(function(err) {
+					ui.addNotification(null, E('p', {}, _('请求失败: ') + String(err)), 'danger');
+				});
 			});
 		}
 
