@@ -91,33 +91,53 @@ return view.extend({
 			var purge = document.getElementById('purge').checked;
 			return ui.confirm((_('确定卸载包 %s ？').format ? _('确定卸载包 %s ？').format(name) : '确定卸载包 ' + name + ' ？'), purge ? _('同时删除配置文件。') : '').then(function(ok) {
 				if (!ok) return;
+
+				// 日志弹窗
+				var log = E('pre', { 'style': 'max-height:260px;overflow:auto;background:#0b1024;color:#cbd5e1;padding:10px;border-radius:8px;' }, '');
+				var closeBtn = E('button', { 'class': 'btn', disabled: true }, _('关闭'));
+				var modal = ui.showModal(_('正在卸载…') + ' ' + name, [
+					log,
+					E('div', { 'style':'margin-top:10px;display:flex;gap:8px;justify-content:flex-end;' }, [ closeBtn ])
+				]);
+				function println(s){ log.appendChild(document.createTextNode(String(s) + '\n')); log.scrollTop = log.scrollHeight; }
+				function enableClose(){ closeBtn.disabled = false; closeBtn.addEventListener('click', function(){ ui.hideModal(modal); }); }
+
 				var token = (L.env && (L.env.token || L.env.csrf_token)) || '';
 				var removeUrl = L.url('admin/system/uninstall/remove') + (token ? ('?token=' + encodeURIComponent(token)) : '');
 				var formBody = 'package=' + encodeURIComponent(name) + '&purge=' + (purge ? '1' : '0');
-				return ui.await(self._httpJson(removeUrl, {
+
+				println('> POST ' + removeUrl);
+				println('> body: ' + formBody);
+				return self._httpJson(removeUrl, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json', 'X-CSRF-Token': token },
 					body: formBody
-				}), _('执行中…')).then(function(res) {
+				}).then(function(res){
+					println('< Response: ' + JSON.stringify(res));
 					if (res && res.ok) {
-						ui.addNotification(null, E('p', {}, _('卸载成功')));
+						println(_('卸载成功'));
+						enableClose();
 						refresh();
 						return;
 					}
-					// Fallback: try GET if POST failed or returned ok=false
+					println('! POST 失败或返回非成功，尝试 GET…');
 					var q = L.url('admin/system/uninstall/remove') + '?' +
 						(token ? ('token=' + encodeURIComponent(token) + '&') : '') +
 						('package=' + encodeURIComponent(name) + '&purge=' + (purge ? '1' : '0'));
+					println('> GET ' + q);
 					return self._httpJson(q, { method: 'GET', headers: { 'Accept': 'application/json' } }).then(function(r2){
+						println('< Response: ' + JSON.stringify(r2));
 						if (r2 && r2.ok) {
-							ui.addNotification(null, E('p', {}, _('卸载成功')));
+							println(_('卸载成功'));
 							refresh();
 						} else {
-							ui.addNotification(null, E('pre', {}, (r2 && r2.message) || _('卸载失败')), 'danger');
+							println(_('卸载失败'));
 						}
+						enableClose();
 					});
-				}).catch(function(err) {
-					ui.addNotification(null, E('p', {}, _('请求失败: ') + String(err)), 'danger');
+				}).catch(function(err){
+					println('! Error: ' + String(err));
+					enableClose();
 				});
 			});
 		}
