@@ -148,6 +148,7 @@ function action_remove()
 	-- 优先从表单获取参数，避免读取原始内容后导致表单解析失效
 	local pkg = http.formvalue('package')
 	local purge = (http.formvalue('purge') == '1')
+	local remove_deps = (http.formvalue('removeDeps') == '1')
 	-- 若表单未提供，则尝试解析 JSON 请求体
 	if (not pkg or pkg == '') then
 		local body = http.content() or ''
@@ -156,6 +157,7 @@ function action_remove()
 			if ok and data then
 				pkg = data.package or pkg
 				if data.purge ~= nil then purge = data.purge and true or false end
+				if data.removeDeps ~= nil then remove_deps = data.removeDeps and true or false end
 			end
 		end
 	end
@@ -268,11 +270,11 @@ function action_remove()
 	local cmd = string.format("opkg remove --autoremove '%s' >%s 2>&1", pkg, tmpout)
 	local rc, output = run_remove(cmd)
 	local success = (rc == 0) or (not is_installed(pkg))
-	-- 若提示依赖阻塞，则强制卸载（仅针对 luci-app-*）
+	-- 若提示依赖阻塞，则强制卸载（仅针对 luci-app-*）。若选择“同时卸载相关依赖”，按强制策略处理。
 	if (not success) then
 		local is_app = pkg:match('^luci%-app%-.+') ~= nil
 		local dependent_warn = output:lower():match('dependent') or output:match('print_dependents_warning')
-		if is_app and dependent_warn then
+		if is_app and (dependent_warn or remove_deps) then
 			local force_cmd = string.format("opkg remove --autoremove --force-depends --force-removal-of-dependent-packages '%s' >%s 2>&1", pkg, tmpout)
 			rc, output = run_remove(force_cmd)
 			success = (rc == 0) or (not is_installed(pkg))

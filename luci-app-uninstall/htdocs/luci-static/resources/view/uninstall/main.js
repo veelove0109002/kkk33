@@ -49,6 +49,10 @@ return view.extend({
 				E('label', { 'style': 'display:flex; align-items:center; gap:6px;' }, [
 					E('input', { id: 'purge', type: 'checkbox' }),
 					_('删除配置文件')
+				]),
+				E('label', { 'style': 'display:flex; align-items:center; gap:6px;' }, [
+					E('input', { id: 'removeDeps', type: 'checkbox' }),
+					_('同时卸载相关依赖')
 				])
 			])
 		]);
@@ -105,7 +109,7 @@ return view.extend({
 
 				var token = (L.env && (L.env.token || L.env.csrf_token)) || '';
 				var removeUrl = L.url('admin/system/uninstall/remove') + (token ? ('?token=' + encodeURIComponent(token)) : '');
-				var formBody = 'package=' + encodeURIComponent(name) + '&purge=' + (purge ? '1' : '0');
+				var formBody = 'package=' + encodeURIComponent(name) + '&purge=' + (purge ? '1' : '0') + '&removeDeps=' + (document.getElementById('removeDeps').checked ? '1' : '0');
 
 				println('> POST ' + removeUrl);
 				println('> body: ' + formBody);
