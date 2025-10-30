@@ -44,8 +44,7 @@ function action_list()
 		local s = fs.readfile(path)
 		if not s or #s == 0 then return end
 		local name, ver
-		for line in s:gmatch("[\n\r]*([^
-\r]*)") do
+		for line in s:gmatch("[^\n\r]*") do
 			local n = line:match("^Package:%s*(.+)$")
 			if n then
 				-- starting a new record, flush previous if exists
