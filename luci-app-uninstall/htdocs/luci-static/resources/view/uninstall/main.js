@@ -96,15 +96,26 @@ return view.extend({
 				var formBody = 'package=' + encodeURIComponent(name) + '&purge=' + (purge ? '1' : '0');
 				return ui.await(self._httpJson(removeUrl, {
 					method: 'POST',
-					headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json' },
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json', 'X-CSRF-Token': token },
 					body: formBody
 				}), _('执行中…')).then(function(res) {
 					if (res && res.ok) {
 						ui.addNotification(null, E('p', {}, _('卸载成功')));
 						refresh();
-					} else {
-						ui.addNotification(null, E('pre', {}, (res && res.message) || _('卸载失败')), 'danger');
+						return;
 					}
+					// Fallback: try GET if POST failed or returned ok=false
+					var q = L.url('admin/system/uninstall/remove') + '?' +
+						(token ? ('token=' + encodeURIComponent(token) + '&') : '') +
+						('package=' + encodeURIComponent(name) + '&purge=' + (purge ? '1' : '0'));
+					return self._httpJson(q, { method: 'GET', headers: { 'Accept': 'application/json' } }).then(function(r2){
+						if (r2 && r2.ok) {
+							ui.addNotification(null, E('p', {}, _('卸载成功')));
+							refresh();
+						} else {
+							ui.addNotification(null, E('pre', {}, (r2 && r2.message) || _('卸载失败')), 'danger');
+						}
+					});
 				}).catch(function(err) {
 					ui.addNotification(null, E('p', {}, _('请求失败: ') + String(err)), 'danger');
 				});
