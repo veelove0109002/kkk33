@@ -60,7 +60,8 @@ return view.extend({
 				var q = (document.getElementById('filter').value || '').toLowerCase();
 				var tbody = E('tbody', {});
 				pkgs.filter(p => !q || p.name.toLowerCase().includes(q)).forEach(p => {
-					var btn = E('button', { 'class': 'btn cbi-button cbi-button-remove', click: () => uninstall(p.name) }, _('卸载'));
+					var btn = E('button', { 'class': 'btn cbi-button cbi-button-remove' }, _('卸载'));
+					btn.addEventListener('click', function(){ uninstall(p.name); });
 					tbody.appendChild(E('tr', {}, [
 						E('td', {}, p.name),
 						E('td', {}, p.version || ''),
