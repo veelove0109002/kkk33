@@ -79,8 +79,16 @@ function action_list()
 		parse_status('/var/lib/opkg/status')
 		if #pkgs == 0 then parse_status('/usr/lib/opkg/status') end
 	end
-	table.sort(pkgs, function(a,b) return a.name < b.name end)
-	json_response({ packages = pkgs })
+	-- only keep luci-app-* packages
+	local only = {}
+	for _, p in ipairs(pkgs) do
+		if p.name and p.name:match('^luci%-app%-') then
+			only[#only+1] = p
+		end
+	end
+	-- sort by name
+	table.sort(only, function(a,b) return a.name < b.name end)
+	json_response({ packages = only })
 end
 
 local function collect_conffiles(pkg)
