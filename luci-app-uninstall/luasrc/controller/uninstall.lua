@@ -44,15 +44,16 @@ function action_list()
 		local s = fs.readfile(path)
 		if not s or #s == 0 then return end
 		local name, ver
-		for line in s:gmatch("[^\n]+") do
+		for line in s:gmatch("[\n\r]*([^
+\r]*)") do
 			local n = line:match("^Package:%s*(.+)$")
-			if n then name = n end
+			if n then
+				-- starting a new record, flush previous if exists
+				if name then pkgs[#pkgs+1] = { name = name, version = ver or '' } end
+				name, ver = n, nil
+			end
 			local v = line:match("^Version:%s*(.+)$")
 			if v then ver = v end
-			if line == '' and name then
-				pkgs[#pkgs+1] = { name = name, version = ver or '' }
-				name, ver = nil, nil
-			end
 		end
 		if name then pkgs[#pkgs+1] = { name = name, version = ver or '' } end
 	end
