@@ -95,6 +95,26 @@ local function collect_conffiles(pkg)
 	return files
 end
 
+-- 检查包是否仍处于已安装状态
+local function is_installed(pkg)
+	local status_path = fs.stat('/usr/lib/opkg/status') and '/usr/lib/opkg/status' or (fs.stat('/var/lib/opkg/status') and '/var/lib/opkg/status' or nil)
+	if not status_path then return false end
+	local s = fs.readfile(status_path)
+	if not s or #s == 0 then return false end
+	local name, installed
+	for line in s:gmatch("[^\n\r]*") do
+		local n = line:match("^Package:%s*(.+)$")
+		if n then
+			-- flush previous
+			if name == pkg and installed then return true end
+			name, installed = n, false
+		end
+		local st = line:match("^Status:%s*(.+)$")
+		if st and st:match('installed') then installed = true end
+	end
+	return (name == pkg and installed) and true or false
+end
+
 local function remove_confs(files)
 	local removed = {}
 	for _, f in ipairs(files or {}) do
@@ -240,7 +260,8 @@ function action_remove()
 	local cmd = string.format("opkg remove --autoremove '%s' >%s 2>&1", pkg, tmpout)
 	local rc = sys.call(cmd)
 	local output = fs.readfile(tmpout) or ''
-	local success = (rc == 0)
+	-- 成功判定：优先看退出码，然后以状态文件为准兜底
+	local success = (rc == 0) or (not is_installed(pkg))
 	-- 自动清理未使用依赖
 	sys.call('opkg autoremove >/dev/null 2>&1')
 
