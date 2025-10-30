@@ -28,6 +28,10 @@ local fs = require 'nixio.fs'
 local function json_response(tbl, code)
 	code = code or 200
 	http.status(code, '')
+	-- Avoid client/proxy caching
+	http.header('Cache-Control', 'no-cache, no-store, must-revalidate')
+	http.header('Pragma', 'no-cache')
+	http.header('Expires', '0')
 	http.prepare_content('application/json')
 	http.write(json.stringify(tbl or {}))
 end
@@ -43,18 +47,38 @@ function action_list()
 				size = meta and meta.Size or 0
 			}
 		end
-	else
-		-- Fallback: parse `opkg list-installed`
+	end
+	if #pkgs == 0 then
+		-- Fallback 1: parse `opkg list-installed`
 		local out = sys.exec("opkg list-installed 2>/dev/null") or ''
 		for line in out:gmatch("[^\n]+") do
-			-- format: <name> - <version>
 			local n, v = line:match("^([^%s]+)%s+-%s+(.+)$")
 			if n then
 				pkgs[#pkgs+1] = { name = n, version = v or '' }
 			end
 		end
 	end
-	-- sort by name
+	if #pkgs == 0 then
+		-- Fallback 2: parse status file directly
+		local function parse_status(path)
+			local s = fs.readfile(path)
+			if not s or #s == 0 then return end
+			local name, ver
+			for line in s:gmatch("[^\n]+") do
+				local n = line:match("^Package:%s*(.+)$")
+				if n then name = n end
+				local v = line:match("^Version:%s*(.+)$")
+				if v then ver = v end
+				if line == '' and name then
+					pkgs[#pkgs+1] = { name = name, version = ver or '' }
+					name, ver = nil, nil
+				end
+			end
+			if name then pkgs[#pkgs+1] = { name = name, version = ver or '' } end
+		end
+		parse_status('/var/lib/opkg/status')
+		if #pkgs == 0 then parse_status('/usr/lib/opkg/status') end
+	end
 	table.sort(pkgs, function(a,b) return a.name < b.name end)
 	json_response({ packages = pkgs })
 end
