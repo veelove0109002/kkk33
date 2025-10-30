@@ -89,7 +89,8 @@ return view.extend({
 
 		function uninstall(name) {
 			var purge = document.getElementById('purge').checked;
-			return ui.confirm((_('确定卸载包 %s ？').format ? _('确定卸载包 %s ？').format(name) : '确定卸载包 ' + name + ' ？'), purge ? _('同时删除配置文件。') : '').then(function(ok) {
+			var confirmFn = (ui && typeof ui.confirm === 'function') ? ui.confirm : function(msg, desc){ return Promise.resolve(window.confirm(desc ? (msg + '\n' + desc) : msg)); };
+			return confirmFn((_('确定卸载包 %s ？').format ? _('确定卸载包 %s ？').format(name) : '确定卸载包 ' + name + ' ？'), purge ? _('同时删除配置文件。') : '').then(function(ok) {
 				if (!ok) return;
 
 				// 日志弹窗
