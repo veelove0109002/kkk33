@@ -91,11 +91,13 @@ return view.extend({
 			var purge = document.getElementById('purge').checked;
 			return ui.confirm((_('确定卸载包 %s ？').format ? _('确定卸载包 %s ？').format(name) : '确定卸载包 ' + name + ' ？'), purge ? _('同时删除配置文件。') : '').then(function(ok) {
 				if (!ok) return;
-				var removeUrl = L.url('admin/system/uninstall/remove') + (L.env && L.env.csrf_token ? ('?token=' + encodeURIComponent(L.env.csrf_token)) : '');
+				var token = (L.env && (L.env.token || L.env.csrf_token)) || '';
+				var removeUrl = L.url('admin/system/uninstall/remove') + (token ? ('?token=' + encodeURIComponent(token)) : '');
+				var formBody = 'package=' + encodeURIComponent(name) + '&purge=' + (purge ? '1' : '0');
 				return ui.await(self._httpJson(removeUrl, {
 					method: 'POST',
-					headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-					body: JSON.stringify({ package: name, purge: purge })
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json' },
+					body: formBody
 				}), _('执行中…')).then(function(res) {
 					if (res && res.ok) {
 						ui.addNotification(null, E('p', {}, _('卸载成功')));
