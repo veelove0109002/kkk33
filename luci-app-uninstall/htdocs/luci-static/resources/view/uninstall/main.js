@@ -56,7 +56,7 @@ return view.extend({
 			return L.resource('icons/' + name + '.png');
 		}
 
-		var grid = E('div', { 'class': 'card-grid', 'style': 'display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-top:8px;' });
+		var grid = E('div', { 'class': 'card-grid', 'style': 'display:block;margin-top:8px;' });
 		root.appendChild(grid);
 
 		var NAME_MAP = {
@@ -155,13 +155,13 @@ return view.extend({
 
 		function renderSection(title, items){
 			if (!items || items.length === 0) return;
-			var header = E('div', { 'style': 'margin-top:12px; display:flex; align-items:center; justify-content:space-between;' }, [
-				E('h3', { 'style': 'margin:0; font-size:14px; color:#374151; font-weight:600;' }, title)
+			var header = E('div', { 'style': 'display:flex; align-items:center; justify-content:space-between;' }, [
+				E('h3', { 'style': 'margin:12px 0 0 0; font-size:14px; color:#374151; font-weight:600;' }, title)
 			]);
 			var groupGrid = E('div', { 'style': 'display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:12px; margin-top:8px;' });
 			items.forEach(function(p){ groupGrid.appendChild(renderCard(p)); });
-			grid.appendChild(header);
-			grid.appendChild(groupGrid);
+			var section = E('div', { 'style': 'margin-bottom:8px;' }, [ header, groupGrid ]);
+			grid.appendChild(section);
 		}
 
 		function refresh() {
