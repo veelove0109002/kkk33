@@ -280,6 +280,8 @@ function action_list()
 					for dep in deps:gmatch('([^,%s]+)') do
 						local app = dep:match('^luci%-app%-(.+)$')
 						if app and #app > 0 then meta_apps[app] = true end
+						-- 额外指定：socat 强制归类到 iStoreOS
+						if dep == 'luci-app-socat' then meta_apps['socat'] = true end
 					end
 				end
 			end
@@ -292,7 +294,7 @@ function action_list()
 		p.is_app = (p.name and p.name:match('^luci%-app%-')) and true or false
 		if not p.category and p.is_app then
 			local app = p.name:match('^luci%-app%-(.+)$')
-			if app and meta_apps[app] then
+			if app and (meta_apps[app] or p.name == 'luci-app-socat') then
 				p.category = 'iStoreOS插件类'
 			else
 				p.category = '手动安装插件类'
