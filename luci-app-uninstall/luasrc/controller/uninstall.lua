@@ -292,11 +292,12 @@ function action_list()
 	-- mark whether package looks like a LuCI app, and categorize by source
 	for _, p in ipairs(pkgs) do
 		p.is_app = (p.name and p.name:match('^luci%-app%-')) and true or false
-		if not p.category and p.is_app then
+		if p.is_app then
 			local app = p.name:match('^luci%-app%-(.+)$')
+			-- 优先规则：若由 app-meta-* 映射或强制指定，则归入 iStoreOS（覆盖之前的“手动安装”分类）
 			if app and (meta_apps[app] or p.name == 'luci-app-socat') then
 				p.category = 'iStoreOS插件类'
-			else
+			elseif not p.category then
 				p.category = '手动安装插件类'
 			end
 		end
