@@ -341,3 +341,9 @@ function action_remove()
 		end
 	end
 
+	json_response({
+		ok = success,
+		message = output or '',
+		removed_configs = removed_confs
+	})
+end
