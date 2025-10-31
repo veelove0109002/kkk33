@@ -3,7 +3,7 @@
 
 include $(TOPDIR)/rules.mk
 
-LUCI_TITLE:=LuCI - Uninstall Packages
+LUCI_TITLE:=LuCI - 高级卸载
 LUCI_PKGARCH:=all
 LUCI_DEPENDS:=+luci-base +rpcd +opkg
 PKG_LICENSE:=Apache-2.0

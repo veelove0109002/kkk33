@@ -42,7 +42,7 @@ return view.extend({
 	render: function() {
 		var self = this;
 		var root = E('div', { 'class': 'cbi-map' }, [
-			E('h2', {}, _('Uninstall Packages')),
+			E('h2', {}, _('高级卸载')),
 			E('div', { 'class': 'cbi-section-descr' }, _('选择要卸载的已安装软件包。可选地同时删除其配置文件。')),
 			E('div', { 'style': 'margin:8px 0; display:flex; gap:8px; align-items:center;' }, [
 				E('input', { id: 'filter', type: 'text', placeholder: _('筛选包名…'), 'style': 'flex:1;' })
