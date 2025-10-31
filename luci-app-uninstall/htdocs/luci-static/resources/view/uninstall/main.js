@@ -73,10 +73,10 @@ return view.extend({
 			var ICON_DEP = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 1 7.07 0l1.41 1.41a5 5 0 1 1-7.07 7.07l-1.41-1.41"/><path d="M14 11a5 5 0 0 1-7.07 0L5.52 9.59a5 5 0 1 1 7.07-7.07L14 3.93"/></svg>');
 			
 			var verCorner = E('div', { 'style': 'position:absolute; right:12px; bottom:14px; font-size:12px; color:#111827; background:#f3f4f6; padding:2px 8px; border-radius:10px; border:1px solid #e5e7eb;' }, (pkg.version || ''));
-			var purgeEl = E('input', { type: 'checkbox', checked: true, 'style': 'width:16px;height:16px;margin:0;vertical-align:middle;' });
-			var purgeLabel = E('label', { 'style': 'display:flex; align-items:center; gap:6px;' }, [ E('img', { src: ICON_CFG, width: 16, height: 16, 'style': 'display:inline-block;' }), _('删除配置文件'), purgeEl ]);
-			var depsEl = E('input', { type: 'checkbox', checked: true });
-			var depsLabel = E('label', { 'style': 'display:flex; align-items:center; gap:6px;' }, [ E('img', { src: ICON_DEP, width: 16, height: 16, 'style': 'display:inline-block;' }), _('卸载相关依赖'), depsEl ]);
+			var purgeEl = E('input', { type: 'checkbox', checked: true, 'style': 'width:16px;height:16px;margin:0;vertical-align:middle;transform: translateY(-1px);' });
+			var purgeLabel = E('label', { 'style': 'display:grid; grid-template-columns:16px auto 16px; align-items:center; column-gap:6px; line-height:20px;' }, [ E('img', { src: ICON_CFG, width: 16, height: 16, 'style': 'display:inline-block;' }), _('删除配置文件'), purgeEl ]);
+			var depsEl = E('input', { type: 'checkbox', checked: true, 'style': 'width:16px;height:16px;margin:0;vertical-align:middle;transform: translateY(-1px);' });
+			var depsLabel = E('label', { 'style': 'display:grid; grid-template-columns:16px auto 16px; align-items:center; column-gap:6px; line-height:20px;' }, [ E('img', { src: ICON_DEP, width: 16, height: 16, 'style': 'display:inline-block;' }), _('卸载相关依赖'), depsEl ]);
 			var optionsRow = E('div', { 'style': 'display:flex; gap:12px; align-items:center; flex-wrap:wrap;' }, [ purgeLabel, depsLabel ]);
 			var btn = E('button', { type: 'button', 'class': 'btn cbi-button cbi-button-remove' }, _('卸载'));
 			btn.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); uninstall(pkg.name, purgeEl.checked, depsEl.checked); });
@@ -162,7 +162,4 @@ return view.extend({
 			if (ev.target && ev.target.id === 'filter') refresh();
 		});
 
-		refresh();
-		return root;
-	}
-});
+		refresh(
