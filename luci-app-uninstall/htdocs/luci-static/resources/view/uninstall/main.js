@@ -51,8 +51,10 @@ return view.extend({
 
 		// Default icon (inline SVG as data URI)
 		var DEFAULT_ICON = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2" ry="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>');
-		function packageIcon(name){
-			// Try common icon path under luci-static/resources/icons
+		function packageIcon(name, category){
+			// iStoreOS 插件类使用 /luci-static/resources/app-icons/
+			if (category === 'iStoreOS插件类') return L.resource('app-icons/' + name + '.png');
+			// 其他使用默认 icons 目录
 			return L.resource('icons/' + name + '.png');
 		}
 
@@ -117,7 +119,7 @@ return view.extend({
 				// install_time from backend is seconds since epoch
 				isNew = ((Date.now() / 1000) - pkg.install_time) < 259200; // 3 days
 			}
-			var img = E('img', { src: packageIcon(pkg.name), alt: pkg.name, width: 56, height: 56, 'style': 'border-radius:10px;background:#f3f4f6;object-fit:contain;border:1px solid #e5e7eb;' });
+			var img = E('img', { src: packageIcon(pkg.name, pkg.category), alt: pkg.name, width: 56, height: 56, 'style': 'border-radius:10px;background:#f3f4f6;object-fit:contain;border:1px solid #e5e7eb;' });
 			img.addEventListener('error', function(){ img.src = DEFAULT_ICON; });
 			var titleCn = E('div', { 'style': 'font-weight:600;color:#111827;word-break:break-all;font-size:14px;' }, displayName(pkg.name));
 			var titleEn = E('div', { 'style': 'font-size:12px;color:#6b7280;word-break:break-all;' }, pkg.name);
@@ -177,12 +179,12 @@ return view.extend({
 					var cat = (p.category || '');
 					if (cat === 'VUM插件类') g_vum.push(p);
 					else if (cat === 'iStoreOS插件类') g_istore.push(p);
-					else if (cat === '手动安装插件类') g_manual.push(p);
+					else if (cat === '其他插件类') g_manual.push(p);
 					else g_manual.push(p);
 				});
 				renderSection(_('VUM插件类'), g_vum);
 				renderSection(_('iStoreOS插件类'), g_istore);
-				renderSection(_('手动安装插件类'), g_manual);
+				renderSection(_('其他插件类'), g_manual);
 
 			}).catch(function(err){
 				ui.addNotification(null, E('p', {}, _('加载软件包列表失败: ') + String(err)), 'danger');

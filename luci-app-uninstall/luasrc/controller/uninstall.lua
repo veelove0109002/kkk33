@@ -298,7 +298,7 @@ function action_list()
 			if app and (meta_apps[app] or p.name == 'luci-app-socat') then
 				p.category = 'iStoreOS插件类'
 			elseif not p.category then
-				p.category = '手动安装插件类'
+				p.category = '其他插件类'
 			end
 		end
 	end
