@@ -5,8 +5,10 @@
 'require ui';
 
 return view.extend({
+	// 预加载 iStoreOS 已安装页的中文名称映射
 	load: function() {
-		return Promise.resolve();
+		var self = this;
+		return self._fetchStoreNames();
 	},
 
 
@@ -24,6 +26,33 @@ return view.extend({
 			});
 		}
 		return Promise.reject(new Error('No HTTP client available'));
+	},
+
+	_storeNames: {},
+	_fetchStoreNames: function(){
+		var self = this;
+		var url = '/cgi-bin/luci/admin/store/pages/installed';
+		return self._httpJson(url, { headers: { 'Accept': 'application/json' } }).then(function(res){
+			// 兼容返回结构：可能是 { list: [...] } 或 { data: { list: [...] } }
+			var list = (res && res.list) || (res && res.data && res.data.list) || [];
+			list.forEach(function(item){
+				var en = item && (item.pkg || item.name || item.id);
+				var zh = item && (item.title || item.cn || item.zh || item.name_cn);
+				if (en && zh) {
+					// 建立多种键的映射：完整名、去前缀、去前缀去横杆、全小写
+					var full = String(en);
+					var short = full.replace(/^luci-app-/, '');
+					var shortNoDash = short.replace(/-/g, '');
+					self._storeNames[full] = zh;
+					self._storeNames[short] = zh;
+					self._storeNames[shortNoDash] = zh;
+					self._storeNames[full.toLowerCase()] = zh;
+					self._storeNames[short.toLowerCase()] = zh;
+					self._storeNames[shortNoDash.toLowerCase()] = zh;
+				}
+			});
+			return self._storeNames;
+		}).catch(function(){ return self._storeNames; });
 	},
 
 	pollList: function() {
@@ -112,7 +141,14 @@ return view.extend({
 			'luci-app-alist': _('网盘索引'),
 			'luci-app-ttyd': _('Web终端')
 		};
-		function displayName(name){ return NAME_MAP[name] || name; }
+		function displayName(name, category){
+			// iStoreOS 插件优先用商店中文名；否则 fallback 到内置映射或原名
+			var zh = null;
+			if (category === 'iStoreOS插件类') {
+				zh = (name && self && self._storeNames && self._storeNames[name]) || null;
+			}
+			return zh || NAME_MAP[name] || name;
+		}
 
 		function renderCard(pkg){
 			var isNew = false;
@@ -122,7 +158,7 @@ return view.extend({
 			}
 			var img = E('img', { src: packageIcon(pkg.name), alt: pkg.name, width: 56, height: 56, 'style': 'border-radius:10px;background:#f3f4f6;object-fit:contain;border:1px solid #e5e7eb;' });
 			img.addEventListener('error', function(){ img.src = DEFAULT_ICON; });
-			var titleCn = E('div', { 'style': 'font-weight:600;color:#111827;word-break:break-all;font-size:14px;' }, displayName(pkg.name));
+			var titleCn = E('div', { 'style': 'font-weight:600;color:#111827;word-break:break-all;font-size:14px;' }, displayName(pkg.name, pkg.category));
 			var titleEn = E('div', { 'style': 'font-size:12px;color:#6b7280;word-break:break-all;' }, pkg.name);
 			var title = E('div', { 'style': 'display:flex; flex-direction:column; gap:2px;' }, [ titleCn, titleEn ]);
 			// small inline icons for options
