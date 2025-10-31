@@ -28,7 +28,7 @@ return view.extend({
 
 	pollList: function() {
 		var self = this;
-		function once(){ return self._httpJson(L.url('admin/system/uninstall/list'), { headers: { 'Accept': 'application/json' } }); }
+		function once(){ return self._httpJson(L.url('admin/vum/uninstall/list'), { headers: { 'Accept': 'application/json' } }); }
 		return once().then(function(res){
 			if (res && res.packages && res.packages.length > 0) return res;
 			// retry up to 2 times with small delay
@@ -104,7 +104,7 @@ return view.extend({
 				function enableClose(){ closeBtn.disabled = false; closeBtn.addEventListener('click', function(){ ui.hideModal(modal); }); }
 
 				var token = (L.env && (L.env.token || L.env.csrf_token)) || '';
-				var removeUrl = L.url('admin/system/uninstall/remove') + (token ? ('?token=' + encodeURIComponent(token)) : '');
+				var removeUrl = L.url('admin/vum/uninstall/remove') + (token ? ('?token=' + encodeURIComponent(token)) : '');
 				var formBody = 'package=' + encodeURIComponent(name) + '&purge=' + (purge ? '1' : '0') + '&removeDeps=' + (removeDeps ? '1' : '0');
 
 				println('> POST ' + removeUrl);
@@ -122,7 +122,7 @@ return view.extend({
 						return;
 					}
 					println('! POST 失败或返回非成功，尝试 GET…');
-					var q = L.url('admin/system/uninstall/remove') + '?' +
+					var q = L.url('admin/vum/uninstall/remove') + '?' +
 						(token ? ('token=' + encodeURIComponent(token) + '&') : '') +
 						('package=' + encodeURIComponent(name) + '&purge=' + (purge ? '1' : '0') + '&removeDeps=' + (removeDeps ? '1' : '0'));
 					println('> GET ' + q);

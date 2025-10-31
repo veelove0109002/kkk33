@@ -7,14 +7,16 @@ function index()
 		return
 	end
 
-	entry({ 'admin', 'system', 'uninstall' }, view('uninstall/main'), _('Uninstall'), 90).acl_depends = { 'luci-app-uninstall' }
+	entry({ 'admin', 'vum' }, firstchild(), _('VUM插件库'), 60).dependent = true
+	entry({ 'admin', 'vum', 'uninstall' }, view('uninstall/main'), _('Uninstall'), 90).acl_depends = { 'luci-app-uninstall' }
+	entry({ 'admin', 'vum' }, firstchild(), _('VUM插件库'), 60).icon = 'icons/vum.svg'
 
 	local e
-	e = entry({ 'admin', 'system', 'uninstall', 'list' }, call('action_list'))
+	e = entry({ 'admin', 'vum', 'uninstall', 'list' }, call('action_list'))
 	e.leaf = true
 	e.acl_depends = { 'luci-app-uninstall' }
 
-	e = entry({ 'admin', 'system', 'uninstall', 'remove' }, call('action_remove'))
+	e = entry({ 'admin', 'vum', 'uninstall', 'remove' }, call('action_remove'))
 	e.leaf = true
 	e.acl_depends = { 'luci-app-uninstall' }
 end
