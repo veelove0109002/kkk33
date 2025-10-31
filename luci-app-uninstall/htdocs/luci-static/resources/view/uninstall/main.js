@@ -107,7 +107,7 @@ return view.extend({
 				// Clear grid
 				while (grid.firstChild) grid.removeChild(grid.firstChild);
 				list.forEach(function(p){ grid.appendChild(renderCard(p)); });
-				try { localStorage.setItem(STORE_KEY, JSON.stringify(seen)); } catch(e) {}
+
 			}).catch(function(err){
 				ui.addNotification(null, E('p', {}, _('加载软件包列表失败: ') + String(err)), 'danger');
 			});
@@ -172,4 +172,8 @@ return view.extend({
 			if (ev.target && ev.target.id === 'filter') refresh();
 		});
 
-		refresh(
+		refresh();
+		return root;
+	}
+
+});
