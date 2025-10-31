@@ -60,10 +60,16 @@ return view.extend({
 		root.appendChild(grid);
 
 		function renderCard(pkg){
+			var isNew = false;
+			if (pkg && pkg.install_time) {
+				// install_time from backend is seconds since epoch
+				isNew = ((Date.now() / 1000) - pkg.install_time) < 259200; // 3 days
+			}
 			var img = E('img', { src: packageIcon(pkg.name), alt: pkg.name, width: 56, height: 56, 'style': 'border-radius:10px;background:#f3f4f6;object-fit:contain;border:1px solid #e5e7eb;' });
 			img.addEventListener('error', function(){ img.src = DEFAULT_ICON; });
 			var title = E('div', { 'style': 'font-weight:600;color:#111827;word-break:break-all;font-size:14px;' }, pkg.name);
-			var verCorner = E('div', { 'style': 'position:absolute; right:12px; bottom:10px; font-size:12px; color:#6b7280;' }, (pkg.version || ''));
+			
+			var verCorner = E('div', { 'style': 'position:absolute; right:12px; bottom:10px; font-size:12px; color:#111827; background:#f3f4f6; padding:2px 8px; border-radius:10px; border:1px solid #e5e7eb;' }, (pkg.version || ''));
 			var purgeEl = E('input', { type: 'checkbox', checked: true });
 			var purgeLabel = E('label', { 'style': 'display:flex; align-items:center; gap:6px;' }, [ purgeEl, _('删除配置文件') ]);
 			var depsEl = E('input', { type: 'checkbox', checked: true });
@@ -86,6 +92,7 @@ return view.extend({
 				// Clear grid
 				while (grid.firstChild) grid.removeChild(grid.firstChild);
 				list.forEach(function(p){ grid.appendChild(renderCard(p)); });
+				try { localStorage.setItem(STORE_KEY, JSON.stringify(seen)); } catch(e) {}
 			}).catch(function(err){
 				ui.addNotification(null, E('p', {}, _('加载软件包列表失败: ') + String(err)), 'danger');
 			});
