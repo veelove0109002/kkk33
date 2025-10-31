@@ -98,6 +98,7 @@ return view.extend({
 			'luci-app-aria2': _('离线下载'),
 			'luci-app-upnp': _('UPnP端口映射'),
 			'luci-app-ddns': _('动态域名'),
+			'luci-app-ddnsto': _('DDNSTO路由远程'),
 			'luci-app-wol': _('网络唤醒'),
 			'luci-app-firewall': _('防火墙'),
 			'luci-app-transmission': _('BT下载'),
