@@ -85,7 +85,7 @@ function action_list()
 			if it then install_time = tonumber(it) end
 			local st = line:match("^Status:%s*(.+)$")
 			if st and st:match("installed") then is_installed = true end
-			local vt = line:match("^VUM%-Plugin:%s*(.+)$")
+			local vt = line:match("^[Vv][Uu][Mm]%-[Pp]lugin:%s*(.+)$")
 			if vt then vum_tag = vt end
 		end
 		if name and is_installed then
