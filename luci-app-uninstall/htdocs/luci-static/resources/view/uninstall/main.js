@@ -114,7 +114,24 @@ return view.extend({
 		}
 
 		function uninstall(name, purge, removeDeps) {
-			var confirmFn = (ui && typeof ui.confirm === 'function') ? ui.confirm : function(msg, desc){ return Promise.resolve(window.confirm(desc ? (msg + '\n' + desc) : msg)); };
+			var confirmFn = function(msg, desc){
+				return new Promise(function(resolve){
+					var titleRow = E('div', { 'style': 'display:flex; align-items:center; gap:8px;' }, [
+						E('span', { 'style': 'display:inline-flex;width:28px;height:28px;background:#fee2e2;color:#b91c1c;border-radius:999px;align-items:center;justify-content:center;font-weight:700;' }, '!'),
+						E('span', { 'style': 'font-weight:600;font-size:16px;color:#111827;' }, _('卸载确认'))
+					]);
+					var body = E('div', { 'style': 'margin-top:8px;color:#374151;line-height:1.6;' }, [
+						E('div', {}, msg),
+						desc ? E('div', { 'style': 'margin-top:4px;color:#6b7280;' }, desc) : ''
+					]);
+					var cancelBtn = E('button', { 'class': 'btn', 'style': 'background:#eef2ff;color:#1f2937;border-radius:999px;padding:6px 14px;' }, _('取消'));
+					var okBtn = E('button', { 'class': 'btn', 'style': 'background:#2563eb;color:#fff;border-radius:999px;padding:6px 14px;' }, _('确定'));
+					var footer = E('div', { 'style':'margin-top:12px;display:flex;gap:8px;justify-content:flex-end;' }, [ cancelBtn, okBtn ]);
+					var modal = ui.showModal('', [ titleRow, body, footer ]);
+					cancelBtn.addEventListener('click', function(){ ui.hideModal(modal); resolve(false); });
+					okBtn.addEventListener('click', function(){ ui.hideModal(modal); resolve(true); });
+				});
+			};
 			return confirmFn((_('确定卸载包 %s ？').format ? _('确定卸载包 %s ？').format(name) : '确定卸载包 ' + name + ' ？'), purge ? _('同时删除配置文件。') : '').then(function(ok) {
 				if (!ok) return;
 
