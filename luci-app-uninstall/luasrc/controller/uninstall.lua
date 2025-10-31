@@ -133,6 +133,49 @@ function action_list()
 		end
 	end
 	pcall(collect_istore_from_feeds)
+	-- 4) 解析 opkg 安装日志：凡从 repo.istoreos.com 下载的 ipk，对应包归入 iStoreOS
+	local function collect_istore_from_logs()
+		local paths = { '/var/log/opkg.log', '/var/log/opkg/opkg.log', '/var/log/opkg' }
+		for _, p in ipairs(paths) do
+			local st = fs.stat(p)
+			if st and st.type == 'reg' then
+				local content = fs.readfile(p) or ''
+				for line in content:gmatch('[^\n\r]+') do
+					local url = line:match('Downloading%s+(%S+)')
+					if url and url:match('repo%.istoreos%.com') then
+						local file = url:match('/([^/%s]+)%.ipk$')
+						if file then
+							local name = file:match('^(.-)_%d') or file:match('^(.-)%-%d') or file:match('^(luci%-app%-%w+)')
+							if name and #name > 0 then istore_list[name] = true end
+						end
+					end
+					local inst = line:match('Installing%s+([^%s]+)')
+					if inst and inst:match('^luci%-app%-') then istore_list[inst] = true end
+				end
+			elseif st and st.type == 'dir' then
+				local it = fs.dir(p)
+				if it then
+					for fname in it do
+						local fpath = p .. '/' .. fname
+						local content = fs.readfile(fpath) or ''
+						for line in content:gmatch('[^\n\r]+') do
+							local url = line:match('Downloading%s+(%S+)')
+							if url and url:match('repo%.istoreos%.com') then
+								local file = url:match('/([^/%s]+)%.ipk$')
+								if file then
+									local name = file:match('^(.-)_%d') or file:match('^(.-)%-%d') or file:match('^(luci%-app%-%w+)')
+									if name and #name > 0 then istore_list[name] = true end
+								end
+							end
+							local inst = line:match('Installing%s+([^%s]+)')
+							if inst and inst:match('^luci%-app%-') then istore_list[inst] = true end
+						end
+					end
+				end
+			end
+		end
+	end
+	pcall(collect_istore_from_logs)
 
 	-- Prefer parsing status file directly for stability (only include installed packages)
 	local function parse_status(path)
