@@ -266,11 +266,22 @@ function action_list()
 		if not status_path then return end
 		local s = fs.readfile(status_path)
 		if not s or #s == 0 then return end
+		local cur_meta_app
 		for line in s:gmatch("[^\n\r]*") do
 			local n = line:match('^Package:%s*(.+)$')
 			if n then
-				local app = n:match('^app%-meta%-(.+)$')
-				if app and #app > 0 then meta_apps[app] = true end
+				cur_meta_app = n:match('^app%-meta%-(.+)$')
+				if cur_meta_app and #cur_meta_app > 0 then meta_apps[cur_meta_app] = true end
+			end
+			-- 如果是当前的 app-meta-* 记录，解析其 Depends，把所有 luci-app-* 加入映射
+			if cur_meta_app then
+				local deps = line:match('^Depends:%s*(.+)$')
+				if deps and #deps > 0 then
+					for dep in deps:gmatch('([^,%s]+)') do
+						local app = dep:match('^luci%-app%-(.+)$')
+						if app and #app > 0 then meta_apps[app] = true end
+					end
+				end
 			end
 		end
 	end
