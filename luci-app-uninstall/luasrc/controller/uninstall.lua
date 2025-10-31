@@ -260,6 +260,21 @@ function action_list()
 		local app = name:match('^app%-meta%-(.+)$')
 		if app then meta_apps[app] = true end
 	end
+	-- 额外补充：即使 app-meta-* 当前不处于已安装状态，也从整个 status 文件中收集（用于历史安装来源识别）
+	local function collect_meta_apps_from_status_any()
+		local status_path = fs.stat('/usr/lib/opkg/status') and '/usr/lib/opkg/status' or (fs.stat('/var/lib/opkg/status') and '/var/lib/opkg/status' or nil)
+		if not status_path then return end
+		local s = fs.readfile(status_path)
+		if not s or #s == 0 then return end
+		for line in s:gmatch("[^\n\r]*") do
+			local n = line:match('^Package:%s*(.+)$')
+			if n then
+				local app = n:match('^app%-meta%-(.+)$')
+				if app and #app > 0 then meta_apps[app] = true end
+			end
+		end
+	end
+	pcall(collect_meta_apps_from_status_any)
 
 	-- mark whether package looks like a LuCI app, and categorize by source
 	for _, p in ipairs(pkgs) do
