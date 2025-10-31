@@ -54,19 +54,30 @@ function action_list()
 	local function parse_status(path)
 		local s = fs.readfile(path)
 		if not s or #s == 0 then return end
-		local name, ver, is_installed, install_time
+		local name, ver, is_installed, install_time, vum_tag
 		for line in s:gmatch("[^\n\r]*") do
 			local n = line:match("^Package:%s*(.+)$")
 			if n then
 				-- starting a new record, flush previous if exists and installed
 				if name and is_installed then
 					local cat
-					if name == 'luci-app-uninstall' then cat = 'VUM插件类'
-					elseif istore_list[name] then cat = 'iStoreOS插件类'
-					elseif name:match('^luci%-app%-') then cat = '手动安装插件类' end
-					pkgs[#pkgs+1] = { name = name, version = ver or '', install_time = install_time, category = cat }
+					if vum_tag and (vum_tag == '1' or vum_tag == 'yes' or vum_tag == 'true') then
+						cat = 'VUM插件类'
+					elseif name == 'luci-app-uninstall' then
+						cat = 'VUM插件类'
+					elseif istore_list[name] then
+						cat = 'iStoreOS插件类'
+					elseif name:match('^luci%-app%-') then
+						cat = '手动安装插件类'
+					end
+					local vp = false
+					if vum_tag then
+						local v = tostring(vum_tag):lower()
+						vp = (v == '1' or v == 'yes' or v == 'true')
+					end
+					pkgs[#pkgs+1] = { name = name, version = ver or '', install_time = install_time, category = cat, vum_plugin = vp }
 				end
-				name, ver, is_installed, install_time = n, nil, false, nil
+				name, ver, is_installed, install_time, vum_tag = n, nil, false, nil, nil
 			end
 			local v = line:match("^Version:%s*(.+)$")
 			if v then ver = v end
@@ -74,13 +85,26 @@ function action_list()
 			if it then install_time = tonumber(it) end
 			local st = line:match("^Status:%s*(.+)$")
 			if st and st:match("installed") then is_installed = true end
+			local vt = line:match("^VUM%-Plugin:%s*(.+)$")
+			if vt then vum_tag = vt end
 		end
 		if name and is_installed then
 			local cat
-			if name == 'luci-app-uninstall' then cat = 'VUM插件类'
-			elseif istore_list[name] then cat = 'iStoreOS插件类'
-			elseif name:match('^luci%-app%-') then cat = '手动安装插件类' end
-			pkgs[#pkgs+1] = { name = name, version = ver or '', install_time = install_time, category = cat }
+			if vum_tag and (vum_tag == '1' or vum_tag == 'yes' or vum_tag == 'true') then
+				cat = 'VUM插件类'
+			elseif name == 'luci-app-uninstall' then
+				cat = 'VUM插件类'
+			elseif istore_list[name] then
+				cat = 'iStoreOS插件类'
+			elseif name:match('^luci%-app%-') then
+				cat = '手动安装插件类'
+			end
+			local vp = false
+			if vum_tag then
+				local v = tostring(vum_tag):lower()
+				vp = (v == '1' or v == 'yes' or v == 'true')
+			end
+			pkgs[#pkgs+1] = { name = name, version = ver or '', install_time = install_time, category = cat, vum_plugin = vp }
 		end
 	end
 
