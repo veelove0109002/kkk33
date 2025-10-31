@@ -75,6 +75,7 @@ function action_list()
 						local v = tostring(vum_tag):lower()
 						vp = (v == '1' or v == 'yes' or v == 'true')
 					end
+					if name == 'luci-app-uninstall' then vp = true end
 					pkgs[#pkgs+1] = { name = name, version = ver or '', install_time = install_time, category = cat, vum_plugin = vp }
 				end
 				name, ver, is_installed, install_time, vum_tag = n, nil, false, nil, nil
@@ -104,6 +105,7 @@ function action_list()
 				local v = tostring(vum_tag):lower()
 				vp = (v == '1' or v == 'yes' or v == 'true')
 			end
+			if name == 'luci-app-uninstall' then vp = true end
 			pkgs[#pkgs+1] = { name = name, version = ver or '', install_time = install_time, category = cat, vum_plugin = vp }
 		end
 	end
