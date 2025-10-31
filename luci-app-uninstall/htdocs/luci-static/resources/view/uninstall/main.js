@@ -52,8 +52,10 @@ return view.extend({
 		// Default icon (inline SVG as data URI)
 		var DEFAULT_ICON = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2" ry="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>');
 		function packageIcon(name){
-			// 从 app-icons 目录加载 PNG，文件名为去掉前缀的简名：luci-app-xxx -> xxx.png
-			var short = (name || '').replace(/^luci-app-/, '');
+			// 从 app-icons 目录加载 PNG
+			// 规则：luci-app-xxx[-yyy...] -> 移除前缀与横杆，得到 xxx[yyy].png
+			// 例如：luci-app-ddns-go -> ddnsgo.png
+			var short = (name || '').replace(/^luci-app-/, '').replace(/-/g, '');
 			return L.resource('app-icons/' + short + '.png');
 		}
 
