@@ -79,18 +79,26 @@ function action_list()
 		-- 优先尝试解析 JSON
 		local ok, data = pcall(json.parse, body)
 		if ok and type(data) == 'table' then
-			-- 尝试常见字段结构：列表或对象数组，包含包名/name/pkg 字段
-			local function add_name(n)
-				if type(n) == 'string' and #n > 0 then istore_list[n] = true end
+			-- 尝试常见字段结构：列表或对象数组，包含包名/name/pkg 与中文标题字段
+			local function add_item(en, zh)
+				if type(en) == 'string' and #en > 0 then
+					istore_list[en] = true
+					if type(zh) == 'string' and #zh > 0 then istore_list[(en..'|zh')] = zh end
+				end
+			end
+			local function handle(it)
+				local en = it and (it.name or it.pkg or it.package)
+				local zh = it and (it.title or it.cn or it.zh or it.name_cn)
+				add_item(en, zh)
 			end
 			if data.items and type(data.items) == 'table' then
-				for _, it in ipairs(data.items) do add_name(it.name or it.pkg or it.package) end
+				for _, it in ipairs(data.items) do handle(it) end
 			elseif data.list and type(data.list) == 'table' then
-				for _, it in ipairs(data.list) do add_name(it.name or it.pkg or it.package) end
+				for _, it in ipairs(data.list) do handle(it) end
 			elseif data[1] ~= nil then
 				for _, it in ipairs(data) do
-					if type(it) == 'string' then add_name(it)
-					elseif type(it) == 'table' then add_name(it.name or it.pkg or it.package) end
+					if type(it) == 'string' then add_item(it, nil)
+					elseif type(it) == 'table' then handle(it) end
 				end
 			else
 				-- 兜底：从 JSON 文本中提取 luci-app-* 模式
@@ -225,7 +233,7 @@ function action_list()
 			elseif istore_list[name] or name:match('^app%-meta%-.+') then
 				cat = 'iStoreOS插件类'
 			elseif name:match('^luci%-app%-') then
-				cat = '手动安装插件类'
+				cat = '其他插件类'
 			end
 			local vp = false
 			if vum_tag then
@@ -233,7 +241,13 @@ function action_list()
 				vp = (v == '1' or v == 'yes' or v == 'true')
 			end
 			if name == 'luci-app-uninstall' then vp = true end
-			pkgs[#pkgs+1] = { name = name, version = ver or '', install_time = install_time, category = cat, vum_plugin = vp }
+			-- 追加中文显示名：若来自 iStoreOS 页面解析，带入中文字段
+			local display_name
+			if cat == 'iStoreOS插件类' then
+				local zh = istore_list[name .. '|zh']
+				if zh and #zh > 0 then display_name = zh end
+			end
+			pkgs[#pkgs+1] = { name = name, version = ver or '', install_time = install_time, category = cat, vum_plugin = vp, display_name = display_name }
 		end
 	end
 
