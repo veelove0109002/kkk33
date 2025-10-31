@@ -52,14 +52,54 @@ function action_list()
 	end
 	-- 2) 解析 iStoreOS 已安装页面：/cgi-bin/luci/admin/store/pages/installed
 	local function collect_istore_from_page()
-		-- 尝试 wget 获取页面内容（可能需要登录，但本地请求有时可访问）
-		local html = sys.exec("wget -qO- http://127.0.0.1/cgi-bin/luci/admin/store/pages/installed 2>/dev/null") or ''
-		if not html or #html == 0 then
-			-- 回退到 uclient-fetch
-			html = sys.exec("uclient-fetch -qO- http://127.0.0.1/cgi-bin/luci/admin/store/pages/installed 2>/dev/null") or ''
+		-- 使用当前请求的会话 Cookie 访问 API，避免跳登录页
+		local host = (http.getenv and http.getenv('HTTP_HOST')) or '127.0.0.1'
+		local cookie = (http.getcookie and http.getcookie('sysauth')) or ''
+		local hdr = " --header 'Accept: application/json'"
+		if cookie and #cookie > 0 then hdr = hdr .. string.format(" --header 'Cookie: sysauth=%s' ", cookie) end
+		local urls = {
+			string.format('http://%s/cgi-bin/luci/admin/api/store/installed', host),
+			string.format('http://%s/cgi-bin/luci/admin/store/api/installed', host),
+			string.format('http://%s/cgi-bin/luci/admin/store/installed?format=json', host),
+			string.format('http://%s/cgi-bin/luci/admin/store/pages/installed?format=json', host),
+			string.format('http://%s/cgi-bin/luci/admin/store/pages/installed', host),
+		}
+		local body = ''
+		for _, u in ipairs(urls) do
+			body = sys.exec("wget -qO-" .. hdr .. " '" .. u .. "' 2>/dev/null") or ''
+			if not body or #body == 0 then
+				body = sys.exec("uclient-fetch -qO-" .. hdr .. " '" .. u .. "' 2>/dev/null") or ''
+			end
+			if body and #body > 0 then break end
 		end
-		-- 简单抓取页面中出现的 luci-app-* 名称（包含下划线与短横）
-		for name in html:gmatch('(luci%-app%-[%w%_%-%]+)') do
+		if not body or #body == 0 then return end
+		-- 诊断输出：保存获取的响应到 /tmp，便于排查
+		local ok_w = pcall(function() fs.writefile('/tmp/istoreos_installed_response.txt', body) end)
+		if not ok_w then end
+		-- 优先尝试解析 JSON
+		local ok, data = pcall(json.parse, body)
+		if ok and type(data) == 'table' then
+			-- 尝试常见字段结构：列表或对象数组，包含包名/name/pkg 字段
+			local function add_name(n)
+				if type(n) == 'string' and #n > 0 then istore_list[n] = true end
+			end
+			if data.items and type(data.items) == 'table' then
+				for _, it in ipairs(data.items) do add_name(it.name or it.pkg or it.package) end
+			elseif data.list and type(data.list) == 'table' then
+				for _, it in ipairs(data.list) do add_name(it.name or it.pkg or it.package) end
+			elseif data[1] ~= nil then
+				for _, it in ipairs(data) do
+					if type(it) == 'string' then add_name(it)
+					elseif type(it) == 'table' then add_name(it.name or it.pkg or it.package) end
+				end
+			else
+				-- 兜底：从 JSON 文本中提取 luci-app-* 模式
+				for n in body:gmatch('luci%-app%-[%w%_%-%]+') do istore_list[n] = true end
+			end
+			return
+		end
+		-- 回退：从 HTML 文本中提取 luci-app-* 名称
+		for name in body:gmatch('luci%-app%-[%w%_%-%]+') do
 			istore_list[name] = true
 		end
 	end
