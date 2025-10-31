@@ -104,6 +104,35 @@ function action_list()
 		end
 	end
 	pcall(collect_istore_from_page)
+	-- 3) 基于 opkg 源与索引列表判断：凡来自 repo.istoreos.com 的源内的包，归入 iStoreOS
+	local function collect_istore_from_feeds()
+		local feeds = {}
+		local cf = fs.readfile('/etc/opkg/customfeeds.conf') or ''
+		for line in cf:gmatch('[^\n\r]+') do
+			local n,u = line:match('^%s*src_gz%s+([%w%-%_]+)%s+([^%s]+)')
+			if not n then n,u = line:match('^%s*src%s+([%w%-%_]+)%s+([^%s]+)') end
+			if n and u then feeds[n] = u end
+		end
+		local list_dirs = { '/tmp/opkg-lists', '/usr/lib/opkg/lists' }
+		for _, d in ipairs(list_dirs) do
+			local it = fs.dir(d)
+			if it then
+				for fname in it do
+					local path = d .. '/' .. fname
+					local url = feeds[fname] or ''
+					local is_istore = url:match('repo%.istoreos%.com') ~= nil
+					local content = fs.readfile(path) or ''
+					if is_istore and content and #content > 0 then
+						for line in content:gmatch('[^\n\r]*') do
+							local p = line:match('^Package:%s*(.+)$')
+							if p then istore_list[p] = true end
+						end
+					end
+				end
+			end
+		end
+	end
+	pcall(collect_istore_from_feeds)
 
 	-- Prefer parsing status file directly for stability (only include installed packages)
 	local function parse_status(path)
