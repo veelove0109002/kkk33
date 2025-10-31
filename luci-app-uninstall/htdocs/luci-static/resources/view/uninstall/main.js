@@ -160,6 +160,7 @@ return view.extend({
 					if (res && res.ok) {
 						println(_('卸载成功'));
 						enableClose();
+						ui.addNotification(null, E('p', {}, _('卸载成功')), 'success');
 						refresh();
 						return;
 					}
@@ -172,14 +173,17 @@ return view.extend({
 						println('< Response: ' + JSON.stringify(r2));
 						if (r2 && r2.ok) {
 							println(_('卸载成功'));
+							ui.addNotification(null, E('p', {}, _('卸载成功')), 'success');
 							refresh();
 						} else {
 							println(_('卸载失败'));
+							ui.addNotification(null, E('p', {}, _('卸载失败')), 'danger');
 						}
 						enableClose();
 					});
 				}).catch(function(err){
 					println('! Error: ' + String(err));
+					ui.addNotification(null, E('p', {}, _('卸载失败') + '：' + String(err)), 'danger');
 					enableClose();
 				});
 			});
