@@ -59,6 +59,58 @@ return view.extend({
 		var grid = E('div', { 'class': 'card-grid', 'style': 'display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-top:8px;' });
 		root.appendChild(grid);
 
+		var NAME_MAP = {
+			'luci-app-uninstall': _('高级卸载'),
+			'luci-app-ttyd': _('Web终端'),
+			'luci-app-samba4': _('文件共享'),
+			'luci-app-aria2': _('离线下载'),
+			'luci-app-upnp': _('UPnP端口映射'),
+			'luci-app-ddns': _('动态域名'),
+			'luci-app-wol': _('网络唤醒'),
+			'luci-app-firewall': _('防火墙'),
+			'luci-app-transmission': _('BT下载'),
+			'luci-app-openvpn': _('OpenVPN'),
+			'luci-app-wireguard': _('WireGuard'),
+			'luci-app-sqm': _('智能队列管理'),
+			'luci-app-adguardhome': _('广告过滤'),
+			'luci-app-passwall': _('科学上网'),
+			'luci-app-homeassistant': _('家庭助手'),
+			'luci-app-dockerman': _('容器管理'),
+			'luci-app-zerotier': _('ZeroTier'),
+			'luci-app-ksmbd': _('SMB共享'),
+			'luci-app-samba': _('Samba共享'),
+			'luci-app-turboacc': _('网络加速'),
+			'luci-app-mwan3': _('多线多拨'),
+			'luci-app-mwan3helper': _('多线助手'),
+			'luci-app-vlmcsd': _('KMS激活'),
+			'luci-app-cpufreq': _('CPU频率'),
+			'luci-app-cpuset': _('CPU集'),
+			'luci-app-attendedsysupgrade': _('云升级'),
+			'luci-app-statistics': _('统计监控'),
+			'luci-app-nlbwmon': _('带宽监控'),
+			'luci-app-tinyproxy': _('HTTP代理'),
+			'luci-app-shadowsocks-libev': _('Shadowsocks'),
+			'luci-app-smartdns': _('SmartDNS'),
+			'luci-app-banip': _('IP封禁'),
+			'luci-app-hd-idle': _('硬盘休眠'),
+			'luci-app-mosdns': _('DNS加速'),
+			'luci-app-netdata': _('Netdata监控'),
+			'luci-app-minidlna': _('DLNA媒体'),
+			'luci-app-frpc': _('Frp客户端'),
+			'luci-app-frps': _('Frp服务端'),
+			'luci-app-socat': _('端口转发'),
+			'luci-app-kodexplorer': _('可道云'),
+			'luci-app-qbittorrent': _('qBittorrent'),
+			'luci-app-p910nd': _('打印服务器'),
+			'luci-app-nft-qos': _('QoS管理'),
+			'luci-app-brook': _('Brook代理'),
+			'luci-app-openclash': _('OpenClash'),
+			'luci-app-serverchan': _('微信通知'),
+			'luci-app-alist': _('网盘索引'),
+			'luci-app-ttyd': _('Web终端')
+		};
+		function displayName(name){ return NAME_MAP[name] || name; }
+
 		function renderCard(pkg){
 			var isNew = false;
 			if (pkg && pkg.install_time) {
@@ -67,7 +119,7 @@ return view.extend({
 			}
 			var img = E('img', { src: packageIcon(pkg.name), alt: pkg.name, width: 56, height: 56, 'style': 'border-radius:10px;background:#f3f4f6;object-fit:contain;border:1px solid #e5e7eb;' });
 			img.addEventListener('error', function(){ img.src = DEFAULT_ICON; });
-			var title = E('div', { 'style': 'font-weight:600;color:#111827;word-break:break-all;font-size:14px;' }, pkg.name);
+			var title = E('div', { 'style': 'font-weight:600;color:#111827;word-break:break-all;font-size:14px;' }, displayName(pkg.name));
 			// small inline icons for options
 			var ICON_CFG = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M7 7V5a3 3 0 0 1 6 0v2"/></svg>');
 			var ICON_DEP = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 1 7.07 0l1.41 1.41a5 5 0 1 1-7.07 7.07l-1.41-1.41"/><path d="M14 11a5 5 0 0 1-7.07 0L5.52 9.59a5 5 0 1 1 7.07-7.07L14 3.93"/></svg>');
