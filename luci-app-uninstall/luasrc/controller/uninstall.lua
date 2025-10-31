@@ -42,6 +42,7 @@ function action_list()
 	local pkgs = {}
 	-- iStoreOS installed list (if present)
 	local istore_list = {}
+	-- 1) 读取 iStoreOS 本地记录文件
 	if fs.stat('/etc/istoreos/installed.list') then
 		local content = fs.readfile('/etc/istoreos/installed.list') or ''
 		for line in content:gmatch('[^\n\r]+') do
@@ -49,6 +50,20 @@ function action_list()
 			if n and #n > 0 then istore_list[n] = true end
 		end
 	end
+	-- 2) 解析 iStoreOS 已安装页面：/cgi-bin/luci/admin/store/pages/installed
+	local function collect_istore_from_page()
+		-- 尝试 wget 获取页面内容（可能需要登录，但本地请求有时可访问）
+		local html = sys.exec("wget -qO- http://127.0.0.1/cgi-bin/luci/admin/store/pages/installed 2>/dev/null") or ''
+		if not html or #html == 0 then
+			-- 回退到 uclient-fetch
+			html = sys.exec("uclient-fetch -qO- http://127.0.0.1/cgi-bin/luci/admin/store/pages/installed 2>/dev/null") or ''
+		end
+		-- 简单抓取页面中出现的 luci-app-* 名称（包含下划线与短横）
+		for name in html:gmatch('(luci%-app%-[%w%_%-%]+)') do
+			istore_list[name] = true
+		end
+	end
+	pcall(collect_istore_from_page)
 
 	-- Prefer parsing status file directly for stability (only include installed packages)
 	local function parse_status(path)
