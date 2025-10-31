@@ -273,8 +273,14 @@ function action_list()
 			end
 		end
 	end
-	-- sort by name
-	table.sort(pkgs, function(a,b) return a.name < b.name end)
+	-- sort: latest install_time desc, then name asc
+	local function cmp(a, b)
+		local at = tonumber(a.install_time or 0) or 0
+		local bt = tonumber(b.install_time or 0) or 0
+		if at ~= bt then return at > bt end
+		return (a.name or '') < (b.name or '')
+	end
+	table.sort(pkgs, cmp)
 	json_response({ packages = pkgs, count = #pkgs })
 end
 
