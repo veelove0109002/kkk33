@@ -153,6 +153,17 @@ return view.extend({
 			return card;
 		}
 
+		function renderSection(title, items){
+			if (!items || items.length === 0) return;
+			var header = E('div', { 'style': 'margin-top:12px; display:flex; align-items:center; justify-content:space-between;' }, [
+				E('h3', { 'style': 'margin:0; font-size:14px; color:#374151; font-weight:600;' }, title)
+			]);
+			var groupGrid = E('div', { 'style': 'display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:12px; margin-top:8px;' });
+			items.forEach(function(p){ groupGrid.appendChild(renderCard(p)); });
+			grid.appendChild(header);
+			grid.appendChild(groupGrid);
+		}
+
 		function refresh() {
 			self.pollList().then(function(data){
 				var pkgs = (data && data.packages) || [];
@@ -160,7 +171,17 @@ return view.extend({
 				var list = pkgs.filter(function(p){ return p.name && p.name.indexOf('luci-app-') === 0; }).filter(function(p){ return !q || p.name.toLowerCase().includes(q); });
 				// Clear grid
 				while (grid.firstChild) grid.removeChild(grid.firstChild);
-				list.forEach(function(p){ grid.appendChild(renderCard(p)); });
+				var g_vum = [], g_istore = [], g_manual = [];
+				list.forEach(function(p){
+					var cat = (p.category || '');
+					if (cat === 'VUM插件类') g_vum.push(p);
+					else if (cat === 'iStoreOS插件类') g_istore.push(p);
+					else if (cat === '手动安装插件类') g_manual.push(p);
+					else g_manual.push(p);
+				});
+				renderSection(_('VUM插件类'), g_vum);
+				renderSection(_('iStoreOS插件类'), g_istore);
+				renderSection(_('手动安装插件类'), g_manual);
 
 			}).catch(function(err){
 				ui.addNotification(null, E('p', {}, _('加载软件包列表失败: ') + String(err)), 'danger');

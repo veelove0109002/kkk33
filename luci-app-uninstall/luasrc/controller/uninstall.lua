@@ -40,6 +40,15 @@ end
 
 function action_list()
 	local pkgs = {}
+	-- iStoreOS installed list (if present)
+	local istore_list = {}
+	if fs.stat('/etc/istoreos/installed.list') then
+		local content = fs.readfile('/etc/istoreos/installed.list') or ''
+		for line in content:gmatch('[^\n\r]+') do
+			local n = line:match('^%s*([^%s#]+)')
+			if n and #n > 0 then istore_list[n] = true end
+		end
+	end
 
 	-- Prefer parsing status file directly for stability (only include installed packages)
 	local function parse_status(path)
@@ -50,8 +59,14 @@ function action_list()
 			local n = line:match("^Package:%s*(.+)$")
 			if n then
 				-- starting a new record, flush previous if exists and installed
-				if name and is_installed then pkgs[#pkgs+1] = { name = name, version = ver or '', install_time = install_time } end
-				name, ver, is_installed = n, nil, false
+				if name and is_installed then
+					local cat
+					if name == 'luci-app-uninstall' then cat = 'VUM插件类'
+					elseif istore_list[name] then cat = 'iStoreOS插件类'
+					elseif name:match('^luci%-app%-') then cat = '手动安装插件类' end
+					pkgs[#pkgs+1] = { name = name, version = ver or '', install_time = install_time, category = cat }
+				end
+				name, ver, is_installed, install_time = n, nil, false, nil
 			end
 			local v = line:match("^Version:%s*(.+)$")
 			if v then ver = v end
@@ -60,7 +75,13 @@ function action_list()
 			local st = line:match("^Status:%s*(.+)$")
 			if st and st:match("installed") then is_installed = true end
 		end
-		if name and is_installed then pkgs[#pkgs+1] = { name = name, version = ver or '', install_time = install_time } end
+		if name and is_installed then
+			local cat
+			if name == 'luci-app-uninstall' then cat = 'VUM插件类'
+			elseif istore_list[name] then cat = 'iStoreOS插件类'
+			elseif name:match('^luci%-app%-') then cat = '手动安装插件类' end
+			pkgs[#pkgs+1] = { name = name, version = ver or '', install_time = install_time, category = cat }
+		end
 	end
 
 	if fs.stat('/usr/lib/opkg/status') then
@@ -78,9 +99,26 @@ function action_list()
 		end
 	end
 
-	-- mark whether package looks like a LuCI app, but return all installed packages
+	-- build installed name set and detect iStoreOS meta packages
+	local installed = {}
+	for _, p in ipairs(pkgs) do installed[p.name] = true end
+	local meta_apps = {}
+	for name,_ in pairs(installed) do
+		local app = name:match('^app%-meta%-(.+)$')
+		if app then meta_apps[app] = true end
+	end
+
+	-- mark whether package looks like a LuCI app, and categorize by source
 	for _, p in ipairs(pkgs) do
 		p.is_app = (p.name and p.name:match('^luci%-app%-')) and true or false
+		if not p.category and p.is_app then
+			local app = p.name:match('^luci%-app%-(.+)$')
+			if app and meta_apps[app] then
+				p.category = 'iStoreOS插件类'
+			else
+				p.category = '手动安装插件类'
+			end
+		end
 	end
 	-- sort by name
 	table.sort(pkgs, function(a,b) return a.name < b.name end)
