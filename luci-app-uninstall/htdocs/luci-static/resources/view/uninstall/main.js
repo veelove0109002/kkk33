@@ -51,11 +51,10 @@ return view.extend({
 
 		// Default icon (inline SVG as data URI)
 		var DEFAULT_ICON = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2" ry="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>');
-		function packageIcon(name, category){
-			// iStoreOS 插件类优先使用 SVG（更易批量生成占位）
-			if (category === 'iStoreOS插件类') return L.resource('app-icons/' + name + '.svg');
-			// 其他使用默认 icons 目录
-			return L.resource('icons/' + name + '.png');
+		function packageIcon(name){
+			// 从 app-icons 目录加载 PNG，文件名为去掉前缀的简名：luci-app-xxx -> xxx.png
+			var short = (name || '').replace(/^luci-app-/, '');
+			return L.resource('app-icons/' + short + '.png');
 		}
 
 		var grid = E('div', { 'class': 'card-grid', 'style': 'display:block;margin-top:8px;' });
@@ -119,14 +118,8 @@ return view.extend({
 				// install_time from backend is seconds since epoch
 				isNew = ((Date.now() / 1000) - pkg.install_time) < 259200; // 3 days
 			}
-			var img = E('img', { src: packageIcon(pkg.name, pkg.category), alt: pkg.name, width: 56, height: 56, 'style': 'border-radius:10px;background:#f3f4f6;object-fit:contain;border:1px solid #e5e7eb;' });
-			img.addEventListener('error', function(){
-				if (pkg.category === 'iStoreOS插件类' && /\/app-icons\/.+\.svg$/.test(img.src)) {
-					img.src = L.resource('app-icons/' + pkg.name + '.png');
-				} else {
-					img.src = DEFAULT_ICON;
-				}
-			});
+			var img = E('img', { src: packageIcon(pkg.name), alt: pkg.name, width: 56, height: 56, 'style': 'border-radius:10px;background:#f3f4f6;object-fit:contain;border:1px solid #e5e7eb;' });
+			img.addEventListener('error', function(){ img.src = DEFAULT_ICON; });
 			var titleCn = E('div', { 'style': 'font-weight:600;color:#111827;word-break:break-all;font-size:14px;' }, displayName(pkg.name));
 			var titleEn = E('div', { 'style': 'font-size:12px;color:#6b7280;word-break:break-all;' }, pkg.name);
 			var title = E('div', { 'style': 'display:flex; flex-direction:column; gap:2px;' }, [ titleCn, titleEn ]);
