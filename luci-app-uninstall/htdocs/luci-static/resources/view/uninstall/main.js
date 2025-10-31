@@ -56,22 +56,25 @@ return view.extend({
 			return L.resource('icons/' + name + '.png');
 		}
 
-		var grid = E('div', { 'class': 'card-grid', 'style': 'display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:8px;' });
+		var grid = E('div', { 'class': 'card-grid', 'style': 'display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-top:8px;' });
 		root.appendChild(grid);
 
 		function renderCard(pkg){
-			var img = E('img', { src: packageIcon(pkg.name), alt: pkg.name, width: 48, height: 48, 'style': 'border-radius:8px;background:#f3f4f6;object-fit:contain;' });
+			var img = E('img', { src: packageIcon(pkg.name), alt: pkg.name, width: 56, height: 56, 'style': 'border-radius:10px;background:#f3f4f6;object-fit:contain;border:1px solid #e5e7eb;' });
 			img.addEventListener('error', function(){ img.src = DEFAULT_ICON; });
-			var title = E('div', { 'style': 'font-weight:600;color:#111827;margin-top:6px;word-break:break-all;' }, pkg.name);
-			var ver = E('div', { 'style': 'font-size:12px;color:#6b7280;margin-top:2px;' }, (pkg.version || ''));
+			var title = E('div', { 'style': 'font-weight:600;color:#111827;word-break:break-all;font-size:14px;' }, pkg.name);
+			var verBadge = E('span', { 'style': 'font-size:12px;color:#2563eb;background:#e0f2fe;border-radius:999px;padding:2px 8px;' }, (pkg.version || ''));
 			var purgeEl = E('input', { type: 'checkbox' });
 			var purgeLabel = E('label', { 'style': 'display:flex; align-items:center; gap:6px;' }, [ purgeEl, _('删除配置文件') ]);
 			var depsEl = E('input', { type: 'checkbox' });
 			var depsLabel = E('label', { 'style': 'display:flex; align-items:center; gap:6px;' }, [ depsEl, _('同时卸载相关依赖') ]);
-			var optionsRow = E('div', { 'style': 'margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;' }, [ purgeLabel, depsLabel ]);
-			var btn = E('button', { type: 'button', 'class': 'btn cbi-button cbi-button-remove', 'style': 'margin-top:8px;' }, _('卸载'));
+			var optionsRow = E('div', { 'style': 'display:flex; gap:12px; align-items:center; flex-wrap:wrap;' }, [ purgeLabel, depsLabel ]);
+			var btn = E('button', { type: 'button', 'class': 'btn cbi-button cbi-button-remove' }, _('卸载'));
 			btn.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); uninstall(pkg.name, purgeEl.checked, depsEl.checked); });
-			var card = E('div', { 'class': 'pkg-card', 'style': 'display:flex;flex-direction:column;align-items:flex-start;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.04);' }, [img, title, ver, optionsRow, btn]);
+			var metaTop = E('div', { 'style': 'display:flex; align-items:center; gap:8px; flex-wrap:wrap;' }, [ title, verBadge ]);
+			var metaCol = E('div', { 'class': 'pkg-meta', 'style': 'flex:1; display:flex; flex-direction:column; gap:6px;' }, [ metaTop, optionsRow ]);
+			var actions = E('div', { 'class': 'pkg-actions', 'style': 'display:flex; align-items:center; margin-left:auto;' }, [ btn ]);
+			var card = E('div', { 'class': 'pkg-card', 'style': 'display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px solid #e5e7eb; border-radius:12px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,0.04);' }, [ img, metaCol, actions ]);
 			return card;
 		}
 
