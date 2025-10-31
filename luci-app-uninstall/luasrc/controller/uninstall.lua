@@ -192,7 +192,7 @@ function action_list()
 						cat = 'VUM插件类'
 					elseif name == 'luci-app-uninstall' then
 						cat = 'VUM插件类'
-					elseif istore_list[name] then
+					elseif istore_list[name] or name:match('^app%-meta%-.+') then
 						cat = 'iStoreOS插件类'
 					elseif name:match('^luci%-app%-') then
 						cat = '手动安装插件类'
@@ -222,7 +222,7 @@ function action_list()
 				cat = 'VUM插件类'
 			elseif name == 'luci-app-uninstall' then
 				cat = 'VUM插件类'
-			elseif istore_list[name] then
+			elseif istore_list[name] or name:match('^app%-meta%-.+') then
 				cat = 'iStoreOS插件类'
 			elseif name:match('^luci%-app%-') then
 				cat = '手动安装插件类'
